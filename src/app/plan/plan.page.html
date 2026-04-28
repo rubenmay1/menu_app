@@ -10,7 +10,10 @@
     <ion-button fill="clear" (click)="goToPreviousWeek()">
       <ion-icon slot="icon-only" name="chevron-back-outline"></ion-icon>
     </ion-button>
-    <span class="week-label">Week {{ week.isoWeek }}</span>
+    <span class="week-label">
+      Week {{ week.isoWeek }}
+      <ion-icon *ngIf="isWeekComplete" name="checkmark-circle-outline" class="week-complete-tick"></ion-icon>
+    </span>
     <ion-button fill="clear" (click)="goToNextWeek()">
       <ion-icon slot="icon-only" name="chevron-forward-outline"></ion-icon>
     </ion-button>
@@ -26,10 +29,13 @@
         (contextmenu)="$event.preventDefault()"
       >
         <span class="day-name">{{ day.dayName }}</span>
-        <span class="day-date">{{ day.displayDate }}</span>
+        <div class="day-header-right">
+          <span class="day-date">{{ day.displayDate }}</span>
+          <ion-icon *ngIf="isDayComplete(day)" name="checkmark-circle-outline" class="day-complete-tick"></ion-icon>
+        </div>
       </div>
 
-      <div class="item-list" *ngIf="day.items.length > 0">
+      <div class="item-list" [class.item-list--complete]="isDayComplete(day)" *ngIf="day.items.length > 0">
         <div class="menu-item" *ngFor="let item of day.items" (click)="openItemPopup(item, i)">
           <ion-icon *ngIf="item.starred" name="star" class="item-star"></ion-icon>
           <span class="item-name">{{ item.name || '—' }}</span>
@@ -82,12 +88,18 @@
       <ng-container *ngIf="pickerMode === 'default'">
 
         <div class="picker-actions">
-          <button class="picker-action-btn" (click)="setBlank()">None</button>
+          <button class="picker-action-btn" (click)="setBlank()">Reset</button>
+          <button class="picker-action-btn" (click)="setDashed()">--</button>
           <button class="picker-action-btn" (click)="openCustomMode()">Custom</button>
         </div>
 
         <div *ngIf="pickerMeals.length > 0" class="picker-meals-section">
-          <p class="picker-section-label">From Meals<span *ngIf="pickerTagLabel"> — {{ pickerTagLabel }}</span></p>
+          <div class="picker-meals-header">
+            <p class="picker-section-label">From Meals</p>
+            <ng-container *ngIf="tags?.length">
+              <app-tag-pill *ngFor="let t of pickerTags" [name]="t.name" [color]="t.color"></app-tag-pill>
+            </ng-container>
+          </div>
           <div class="picker-meal-row" *ngFor="let meal of pickerMeals" (click)="selectMeal(meal)">
             {{ meal.name }}
           </div>

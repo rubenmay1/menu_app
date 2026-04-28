@@ -1,23 +1,46 @@
 import { Injectable } from '@angular/core';
-import { MenuItem } from './plan.models';
+import { MenuItem, SubMenu, WeekMealEntry } from './plan.models';
 
 @Injectable({ providedIn: 'root' })
 export class PlanService {
 
-  getMenuItems(year: number, week: number, dayIndex: number): MenuItem[] {
+  getSubMenus(dayIndex: number): SubMenu[] {
     try {
-      const raw: any[] = JSON.parse(localStorage.getItem(`menu-items-${year}-${week}-${dayIndex}`) ?? '[]');
-      return raw.map(item => ({
-        ...item,
-        tagIds: item.tagIds ?? (item.tagId != null ? [item.tagId] : [])
-      }));
+      return JSON.parse(localStorage.getItem(`day-submenus-${dayIndex}`) ?? '[]');
     } catch {
       return [];
     }
   }
 
-  setMenuItems(year: number, week: number, dayIndex: number, items: MenuItem[]): void {
-    localStorage.setItem(`menu-items-${year}-${week}-${dayIndex}`, JSON.stringify(items));
+  setSubMenus(dayIndex: number, items: SubMenu[]): void {
+    localStorage.setItem(`day-submenus-${dayIndex}`, JSON.stringify(items));
+  }
+
+  getWeekMeals(year: number, week: number, dayIndex: number): WeekMealEntry[] {
+    try {
+      return JSON.parse(localStorage.getItem(`week-meals-${year}-${week}-${dayIndex}`) ?? '[]');
+    } catch {
+      return [];
+    }
+  }
+
+  setWeekMeals(year: number, week: number, dayIndex: number, entries: WeekMealEntry[]): void {
+    localStorage.setItem(`week-meals-${year}-${week}-${dayIndex}`, JSON.stringify(entries));
+  }
+
+  getMenuItems(year: number, week: number, dayIndex: number): MenuItem[] {
+    const submenus = this.getSubMenus(dayIndex);
+    const weekMeals = this.getWeekMeals(year, week, dayIndex);
+    return submenus.map(sm => {
+      const meal = weekMeals.find(m => m.itemId === sm.id);
+      return {
+        id: sm.id,
+        name: sm.name,
+        tagIds: sm.tagIds,
+        mealName: meal?.mealName,
+        starred: meal?.starred
+      };
+    });
   }
 
   createItemId(): string {

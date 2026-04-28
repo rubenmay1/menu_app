@@ -1,5 +1,5 @@
 ion-searchbar {
-  --background: var(--ion-color-light);
+  --background: var(--surface-1);
   --border-radius: 10px;
   padding: 8px 16px 4px;
 }
@@ -15,9 +15,8 @@ ion-searchbar {
   display: flex;
   align-items: center;
   padding: 12px 16px;
-  background: var(--ion-color-light, #f4f4f4);
-  border-radius: 10px;
-  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.08);
+  background: var(--surface-1);
+  border-radius: 12px;
   user-select: none;
   -webkit-user-select: none;
   cursor: pointer;
@@ -36,7 +35,7 @@ ion-searchbar {
 .backdrop {
   position: fixed;
   inset: 0;
-  background: rgba(0, 0, 0, 0.4);
+  background: rgba(0, 0, 0, 0.5);
   z-index: 1000;
   display: flex;
   align-items: flex-end;
@@ -44,8 +43,8 @@ ion-searchbar {
 }
 
 .bottom-panel {
-  background: var(--ion-color-light);
-  border-radius: 16px 16px 0 0;
+  background: var(--surface-2);
+  border-radius: 28px 28px 0 0;
   padding: 20px 16px 32px;
   width: 100%;
   max-width: 480px;
@@ -67,12 +66,12 @@ ion-searchbar {
   padding: 10px 12px;
   border: 1px solid rgba(255, 255, 255, 0.15);
   border-radius: 8px;
-  background: var(--ion-color-light, #f4f4f4);
-  color: var(--ion-text-color, #000);
+  background: var(--surface-3);
+  color: var(--ion-text-color, #fff);
   margin-bottom: 12px;
 
   &::placeholder { color: var(--ion-color-medium, #999); }
-  &:focus { outline: none; border-color: var(--ion-color-primary, #3880ff); }
+  &:focus { outline: none; border-color: var(--ion-color-primary); }
 }
 
 .preview-row {

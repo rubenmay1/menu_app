@@ -38,7 +38,7 @@ export class PlanPage implements OnInit, AfterViewInit {
   customName: string = '';
   customStarred: boolean = false;
   pickerMeals: Meal[] = [];
-  pickerTagLabel: string = '';
+  pickerTags: Tag[] = [];
 
   private longPressTimers: Map<number, ReturnType<typeof setTimeout>> = new Map();
 
@@ -62,6 +62,16 @@ export class PlanPage implements OnInit, AfterViewInit {
       this.tags = this.tagService.getTags();
       this.week = { ...this.week, days: this.week.days.map(day => this.resolveDay(day)) };
     }
+  }
+
+  isDayComplete(day: DayEntry): boolean {
+    return day.items.length > 0 && day.items.every(item => !!(item.mealName?.trim()));
+  }
+
+  get isWeekComplete(): boolean {
+    if (!this.week) return false;
+    const daysWithItems = this.week.days.filter(d => d.items.length > 0);
+    return daysWithItems.length > 0 && daysWithItems.every(d => this.isDayComplete(d));
   }
 
   private resolveDay(day: DayEntry): DayEntry {
@@ -191,23 +201,25 @@ export class PlanPage implements OnInit, AfterViewInit {
   }
 
   onItemAdd(event: { name: string; tagIds: string[] }): void {
+    const dayIdx = this.dayEditorIndex;
+    const submenus = this.planService.getSubMenus(dayIdx);
+    submenus.push({ id: this.planService.createItemId(), name: event.name, tagIds: event.tagIds });
+    this.planService.setSubMenus(dayIdx, submenus);
     const { year, isoWeek } = this.week;
-    const raw = this.planService.getMenuItems(year, isoWeek, this.dayEditorIndex);
-    raw.push({ id: this.planService.createItemId(), name: event.name, tagIds: event.tagIds });
-    this.planService.setMenuItems(year, isoWeek, this.dayEditorIndex, raw);
-    this.week.days[this.dayEditorIndex] = {
-      ...this.week.days[this.dayEditorIndex],
-      items: this.resolveItems(raw)
+    this.week.days[dayIdx] = {
+      ...this.week.days[dayIdx],
+      items: this.resolveItems(this.planService.getMenuItems(year, isoWeek, dayIdx))
     };
   }
 
   removeItem(itemId: string): void {
+    const dayIdx = this.dayEditorIndex;
+    const submenus = this.planService.getSubMenus(dayIdx).filter(it => it.id !== itemId);
+    this.planService.setSubMenus(dayIdx, submenus);
     const { year, isoWeek } = this.week;
-    const raw = this.planService.getMenuItems(year, isoWeek, this.dayEditorIndex).filter(it => it.id !== itemId);
-    this.planService.setMenuItems(year, isoWeek, this.dayEditorIndex, raw);
-    this.week.days[this.dayEditorIndex] = {
-      ...this.week.days[this.dayEditorIndex],
-      items: this.resolveItems(raw)
+    this.week.days[dayIdx] = {
+      ...this.week.days[dayIdx],
+      items: this.resolveItems(this.planService.getMenuItems(year, isoWeek, dayIdx))
     };
   }
 
@@ -226,9 +238,8 @@ export class PlanPage implements OnInit, AfterViewInit {
       };
     });
     this.week.days[dayIdx] = { ...this.week.days[dayIdx], items };
-    const { year, isoWeek } = this.week;
-    this.planService.setMenuItems(year, isoWeek, dayIdx,
-      items.map(it => ({ id: it.id, name: it.name, tagIds: it.tagIds, starred: it.starred }))
+    this.planService.setSubMenus(dayIdx,
+      items.map(it => ({ id: it.id, name: it.name, tagIds: it.tagIds }))
     );
   }
 
@@ -242,10 +253,10 @@ export class PlanPage implements OnInit, AfterViewInit {
     const meals = this.mealService.getMeals();
     if (item.tagIds.length > 0) {
       this.pickerMeals = meals.filter(m => m.tagId !== null && item.tagIds.includes(m.tagId));
-      this.pickerTagLabel = item.resolvedTags.map(t => t.name).join(', ');
+      this.pickerTags = item.resolvedTags;
     } else {
       this.pickerMeals = meals;
-      this.pickerTagLabel = '';
+      this.pickerTags = [];
     }
     this.pickerMeals.sort((a, b) => a.name.localeCompare(b.name));
     this.itemPopupVisible = true;
@@ -260,6 +271,12 @@ export class PlanPage implements OnInit, AfterViewInit {
   setBlank(): void {
     if (!this.itemPopupItem) return;
     this.saveItemUpdate({ mealName: '', starred: false });
+    this.closeItemPopup();
+  }
+
+  setDashed(): void {
+    if (!this.itemPopupItem) return;
+    this.saveItemUpdate({ mealName: '--', starred: false });
     this.closeItemPopup();
   }
 
@@ -294,17 +311,21 @@ export class PlanPage implements OnInit, AfterViewInit {
     this.closeItemPopup();
   }
 
-  private saveItemUpdate(changes: Partial<MenuItem>): void {
+  private saveItemUpdate(changes: { mealName?: string; starred?: boolean }): void {
     const item = this.itemPopupItem!;
     const dayIndex = this.itemPopupDayIndex;
     const { year, isoWeek } = this.week;
-    const raw = this.planService.getMenuItems(year, isoWeek, dayIndex).map(it =>
-      it.id === item.id ? { ...it, ...changes } : it
-    );
-    this.planService.setMenuItems(year, isoWeek, dayIndex, raw);
+    const entries = this.planService.getWeekMeals(year, isoWeek, dayIndex);
+    const idx = entries.findIndex(e => e.itemId === item.id);
+    if (idx >= 0) {
+      entries[idx] = { ...entries[idx], ...changes };
+    } else {
+      entries.push({ itemId: item.id, ...changes });
+    }
+    this.planService.setWeekMeals(year, isoWeek, dayIndex, entries);
     this.week.days[dayIndex] = {
       ...this.week.days[dayIndex],
-      items: this.resolveItems(raw)
+      items: this.resolveItems(this.planService.getMenuItems(year, isoWeek, dayIndex))
     };
   }
 }

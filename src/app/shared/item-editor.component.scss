@@ -1,6 +1,7 @@
 .editor-items {
-  border: 1px solid rgba(0, 0, 0, 0.08);
-  border-radius: 8px;
+  background: var(--surface-3);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 12px;
   overflow: hidden;
   margin-bottom: 20px;
 }
@@ -10,13 +11,13 @@
   align-items: center;
   gap: 8px;
   padding: 10px 12px;
-  border-bottom: 1px solid rgba(0, 0, 0, 0.06);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
 
   &:last-child { border-bottom: none; }
 }
 
 .reorder-handle {
-  color: rgba(0, 0, 0, 0.3);
+  color: rgba(255, 255, 255, 0.3);
   flex-shrink: 0;
 }
 
@@ -31,7 +32,7 @@
   border: none;
   padding: 2px 4px;
   cursor: pointer;
-  color: rgba(0, 0, 0, 0.35);
+  color: rgba(255, 255, 255, 0.35);
   display: flex;
   align-items: center;
   font-size: 1.1rem;
@@ -56,12 +57,12 @@
   padding: 10px 12px;
   border: 1px solid rgba(255, 255, 255, 0.15);
   border-radius: 8px;
-  background: var(--ion-color-light, #f4f4f4);
-  color: var(--ion-text-color, #000);
+  background: var(--surface-3);
+  color: var(--ion-text-color, #fff);
   margin-bottom: 12px;
 
   &::placeholder { color: var(--ion-color-medium, #999); }
-  &:focus { outline: none; border-color: var(--ion-color-primary, #3880ff); }
+  &:focus { outline: none; border-color: var(--ion-color-primary); }
 }
 
 .tag-selector {
@@ -72,18 +73,24 @@
 }
 
 .tag-sel-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
   padding: 4px 12px;
   border-radius: 999px;
-  border: 1.5px solid rgba(0, 0, 0, 0.12);
+  border: 1.5px solid transparent;
   background: transparent;
   font-family: 'Inter', sans-serif;
   font-size: 0.78rem;
   font-weight: 400;
-  color: var(--ion-text-color, #333);
   cursor: pointer;
 
   &--selected {
-    border: 2px solid rgba(0, 0, 0, 0.15);
-    color: #ffffff;
+    border-color: transparent;
+
+    .pill-check {
+      font-size: 0.85rem;
+      flex-shrink: 0;
+    }
   }
 }

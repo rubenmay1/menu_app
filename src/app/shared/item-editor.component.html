@@ -43,8 +43,13 @@
     class="tag-sel-pill"
     [class.tag-sel-pill--selected]="isTagSelected(tag.id)"
     [style.background-color]="isTagSelected(tag.id) ? tag.color : ''"
+    [style.border-color]="tag.color"
+    [style.color]="isTagSelected(tag.id) ? '#fff' : tag.color"
     (click)="toggleTag(tag.id)"
-  >{{ tag.name }}</button>
+  >
+    <ion-icon *ngIf="isTagSelected(tag.id)" name="checkmark" class="pill-check"></ion-icon>
+    {{ tag.name }}
+  </button>
 </div>
 
 <ion-button expand="block" (click)="onAdd()">Add</ion-button>

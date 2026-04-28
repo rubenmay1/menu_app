@@ -48,9 +48,12 @@ body {
 }
 
 ion-button.btn-delete {
-  --background: #e05c72;
-  --background-hover: #c94f63;
-  --background-activated: #c94f63;
-  --background-focused: #c94f63;
-  --color: #ffffff;
+  --background: transparent;
+  --background-hover: rgba(255, 180, 171, 0.1);
+  --background-activated: rgba(255, 180, 171, 0.12);
+  --background-focused: rgba(255, 180, 171, 0.12);
+  --border-color: rgb(255, 180, 171);
+  --border-style: solid;
+  --border-width: 1.5px;
+  --color: rgb(255, 180, 171);
 }

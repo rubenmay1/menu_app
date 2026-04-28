@@ -1,3 +1,16 @@
+export interface SubMenu {
+  id: string;
+  name: string;
+  tagIds: string[];
+}
+
+export interface WeekMealEntry {
+  itemId: string;
+  mealName?: string;
+  starred?: boolean;
+}
+
+// Combined view: SubMenu merged with its WeekMealEntry for a given week
 export interface MenuItem {
   id: string;
   name: string;

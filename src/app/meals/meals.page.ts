@@ -4,13 +4,6 @@ import { TagService } from '../tags/tag.service';
 import { Meal, Ingredient } from './meal.model';
 import { Tag } from '../tags/tag.model';
 
-interface MealGroup {
-  tagId: string | null;
-  tagName: string;
-  tagColor: string;
-  meals: Meal[];
-}
-
 @Component({
   selector: 'app-meals',
   standalone: false,
@@ -20,8 +13,8 @@ interface MealGroup {
 export class MealsPage {
 
   meals: Meal[] = [];
+  filteredMeals: Meal[] = [];
   tags: Tag[] = [];
-  groupedMeals: MealGroup[] = [];
   searchQuery: string = '';
 
   panelVisible: boolean = false;
@@ -40,51 +33,19 @@ export class MealsPage {
   ionViewWillEnter(): void {
     this.meals = this.mealService.getMeals();
     this.tags = this.tagService.getTags();
-    this.computeGroups();
-  }
-
-  computeGroups(): void {
-    const q = this.searchQuery.toLowerCase().trim();
-    const filtered = q
-      ? this.meals.filter(m => m.name.toLowerCase().includes(q))
-      : [...this.meals];
-
-    const map = new Map<string | null, Meal[]>();
-    for (const meal of filtered) {
-      const key = meal.tagId;
-      if (!map.has(key)) map.set(key, []);
-      map.get(key)!.push(meal);
-    }
-
-    const tagged: MealGroup[] = [];
-    for (const [tagId, meals] of map.entries()) {
-      if (tagId === null) continue;
-      const tag = this.tags.find(t => t.id === tagId);
-      tagged.push({
-        tagId,
-        tagName: tag?.name ?? 'Unknown',
-        tagColor: tag?.color ?? '#ccc',
-        meals: meals.sort((a, b) => a.name.localeCompare(b.name))
-      });
-    }
-    tagged.sort((a, b) => a.tagName.localeCompare(b.tagName));
-
-    if (map.has(null)) {
-      const untagged = map.get(null)!;
-      tagged.push({
-        tagId: null,
-        tagName: '',
-        tagColor: '',
-        meals: untagged.sort((a, b) => a.name.localeCompare(b.name))
-      });
-    }
-
-    this.groupedMeals = tagged;
+    this.applySearch();
   }
 
   onSearchInput(ev: Event): void {
     this.searchQuery = (ev as CustomEvent).detail.value ?? '';
-    this.computeGroups();
+    this.applySearch();
+  }
+
+  private applySearch(): void {
+    const q = this.searchQuery.toLowerCase().trim();
+    this.filteredMeals = q
+      ? this.meals.filter(m => m.name.toLowerCase().includes(q))
+      : [...this.meals];
   }
 
   openCreator(): void {
@@ -115,7 +76,7 @@ export class MealsPage {
     const id = this.editingMealId ?? this.mealService.createId();
     this.mealService.saveMeal({ id, name, tagId: this.editingTagId, ingredients: [...this.editingIngredients] });
     this.meals = this.mealService.getMeals();
-    this.computeGroups();
+    this.applySearch();
     this.closePanel();
   }
 
@@ -123,7 +84,7 @@ export class MealsPage {
     if (!this.editingMealId) return;
     this.mealService.deleteMeal(this.editingMealId);
     this.meals = this.mealService.getMeals();
-    this.computeGroups();
+    this.applySearch();
     this.closePanel();
   }
 
@@ -144,5 +105,9 @@ export class MealsPage {
 
   removeIngredient(id: string): void {
     this.editingIngredients = this.editingIngredients.filter(i => i.id !== id);
+  }
+
+  getTag(tagId: string | null): Tag | undefined {
+    return tagId ? this.tags.find(t => t.id === tagId) : undefined;
   }
 }

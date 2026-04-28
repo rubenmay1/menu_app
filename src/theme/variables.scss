@@ -1,2 +1,19 @@
-// For information on how to create your own theme, please refer to:
-// https://ionicframework.com/docs/theming/
+// Surface elevation hierarchy (Material Dark)
+:root {
+  --surface-0: #000000;
+  --surface-1: #1e1e1e;
+  --surface-2: #2d2d2d;
+  --surface-3: #3c3c3c;
+
+  // Primary brand color (deep pink-red)
+  --ion-color-primary: #d42762;
+  --ion-color-primary-rgb: 212, 39, 98;
+  --ion-color-primary-contrast: #ffffff;
+  --ion-color-primary-contrast-rgb: 255, 255, 255;
+  --ion-color-primary-shade: #bb2257;
+  --ion-color-primary-tint: #d83d71;
+}
+
+ion-content {
+  --background: var(--surface-0);
+}

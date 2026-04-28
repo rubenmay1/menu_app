@@ -1,5 +1,5 @@
 ion-searchbar {
-  --background: var(--ion-color-light);
+  --background: var(--surface-1);
   --border-radius: 10px;
   padding: 8px 16px 4px;
 }
@@ -16,9 +16,8 @@ ion-searchbar {
   align-items: center;
   gap: 8px;
   padding: 12px 16px;
-  background: var(--ion-color-light, #f4f4f4);
-  border-radius: 10px;
-  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.08);
+  background: var(--surface-1);
+  border-radius: 12px;
   cursor: pointer;
   user-select: none;
   -webkit-user-select: none;
@@ -57,7 +56,7 @@ ion-searchbar {
 .backdrop {
   position: fixed;
   inset: 0;
-  background: rgba(0, 0, 0, 0.4);
+  background: rgba(0, 0, 0, 0.5);
   z-index: 1000;
   display: flex;
   align-items: flex-end;
@@ -65,8 +64,8 @@ ion-searchbar {
 }
 
 .bottom-panel {
-  background: var(--ion-color-light);
-  border-radius: 16px 16px 0 0;
+  background: var(--surface-2);
+  border-radius: 28px 28px 0 0;
   padding: 20px 16px 32px;
   width: 100%;
   max-width: 480px;
@@ -100,12 +99,12 @@ ion-searchbar {
   padding: 10px 12px;
   border: 1px solid rgba(255, 255, 255, 0.15);
   border-radius: 8px;
-  background: var(--ion-color-light, #f4f4f4);
-  color: var(--ion-text-color, #000);
+  background: var(--surface-3);
+  color: var(--ion-text-color, #fff);
   margin-bottom: 12px;
 
   &::placeholder { color: var(--ion-color-medium, #999); }
-  &:focus { outline: none; border-color: var(--ion-color-primary, #3880ff); }
+  &:focus { outline: none; border-color: var(--ion-color-primary); }
 }
 
 .tag-selector {
@@ -116,24 +115,25 @@ ion-searchbar {
 }
 
 .tag-sel-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
   padding: 4px 12px;
   border-radius: 999px;
-  border: 1.5px solid rgba(0, 0, 0, 0.12);
+  border: 1.5px solid transparent;
   background: transparent;
   font-family: 'Inter', sans-serif;
   font-size: 0.78rem;
   font-weight: 400;
-  color: var(--ion-text-color, #333);
   cursor: pointer;
 
-  &--none {
-    font-style: italic;
-    color: var(--ion-color-medium, #92949c);
-  }
-
   &--selected {
-    border: 2px solid rgba(0, 0, 0, 0.15);
-    color: #ffffff;
+    border-color: transparent;
+
+    .pill-check {
+      font-size: 0.85rem;
+      flex-shrink: 0;
+    }
   }
 }
 
@@ -143,14 +143,14 @@ ion-searchbar {
   gap: 8px;
   width: 100%;
   padding: 10px 12px;
-  border: 1px solid rgba(0, 0, 0, 0.1);
+  border: 1px solid rgba(255, 255, 255, 0.15);
   border-radius: 8px;
-  background: var(--ion-color-light, #f4f4f4);
+  background: var(--surface-3);
   font-family: 'Inter', sans-serif;
   font-size: 0.9rem;
   cursor: pointer;
   margin-bottom: 16px;
-  color: var(--ion-text-color, #000);
+  color: var(--ion-text-color, #fff);
 
   span { flex: 1; text-align: left; }
 }
@@ -164,7 +164,7 @@ ion-searchbar {
 .ing-backdrop {
   position: fixed;
   inset: 0;
-  background: rgba(0, 0, 0, 0.5);
+  background: rgba(0, 0, 0, 0.6);
   z-index: 2000;
   display: flex;
   align-items: center;
@@ -173,8 +173,8 @@ ion-searchbar {
 }
 
 .ing-popup {
-  background: var(--ion-color-light);
-  border-radius: 16px;
+  background: var(--surface-2);
+  border-radius: 12px;
   width: 100%;
   max-width: 360px;
   max-height: 70vh;
@@ -191,7 +191,7 @@ ion-searchbar {
   border: none;
   font-size: 1.4rem;
   cursor: pointer;
-  color: rgba(0, 0, 0, 0.45);
+  color: rgba(255, 255, 255, 0.45);
   display: flex;
   align-items: center;
   justify-content: center;

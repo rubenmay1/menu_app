@@ -3,13 +3,21 @@
   align-items: center;
   justify-content: space-between;
   padding: 8px 4px;
-  background: var(--ion-color-light);
+  background: var(--surface-0);
 
   .week-label {
     font-family: 'Inter', sans-serif;
     font-size: 1.2rem;
     font-weight: 600;
     letter-spacing: 0.5px;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+  }
+
+  .week-complete-tick {
+    font-size: 1rem;
+    color: rgba(255, 255, 255, 0.3);
   }
 }
 
@@ -21,9 +29,8 @@
 }
 
 .day-card {
-  background: var(--ion-color-light, #f4f4f4);
-  border-radius: 10px;
-  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.08);
+  background: var(--surface-1);
+  border-radius: 12px;
   overflow: hidden;
 }
 
@@ -42,14 +49,30 @@
   font-weight: 600;
 }
 
+.day-header-right {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
 .day-date {
   font-family: 'Inter', sans-serif;
   color: var(--ion-color-medium);
   font-size: 0.85rem;
 }
 
+.day-complete-tick {
+  font-size: 0.95rem;
+  color: rgba(255, 255, 255, 0.3);
+  flex-shrink: 0;
+}
+
 .item-list {
-  border-top: 1px solid rgba(255, 255, 255, 0.14);
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
+
+  &--complete .menu-item {
+    opacity: 0.45;
+  }
 }
 
 .menu-item {
@@ -57,7 +80,7 @@
   align-items: center;
   gap: 8px;
   padding: 9px 16px;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
   cursor: pointer;
 
   &:last-child { border-bottom: none; }
@@ -72,7 +95,7 @@
 .backdrop {
   position: fixed;
   inset: 0;
-  background: rgba(0, 0, 0, 0.4);
+  background: rgba(0, 0, 0, 0.5);
   z-index: 1000;
   display: flex;
   align-items: flex-end;
@@ -80,8 +103,8 @@
 }
 
 .bottom-panel {
-  background: var(--ion-color-light);
-  border-radius: 16px 16px 0 0;
+  background: var(--surface-2);
+  border-radius: 28px 28px 0 0;
   padding: 20px 16px 32px;
   width: 100%;
   max-width: 480px;
@@ -120,7 +143,7 @@
 .picker-backdrop {
   position: fixed;
   inset: 0;
-  background: rgba(0, 0, 0, 0.5);
+  background: rgba(0, 0, 0, 0.6);
   z-index: 2000;
   display: flex;
   align-items: center;
@@ -129,8 +152,8 @@
 }
 
 .picker-popup {
-  background: var(--ion-color-light, #f4f4f4);
-  border-radius: 16px;
+  background: var(--surface-2);
+  border-radius: 12px;
   width: 100%;
   max-width: 360px;
   max-height: 75vh;
@@ -147,7 +170,7 @@
   border: none;
   font-size: 1.4rem;
   cursor: pointer;
-  color: rgba(0, 0, 0, 0.45);
+  color: rgba(255, 255, 255, 0.45);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -191,18 +214,25 @@
   flex: 1;
   padding: 10px 4px;
   border-radius: 10px;
-  border: 1.5px solid rgba(0, 0, 0, 0.12);
+  border: 1.5px solid rgba(255, 255, 255, 0.18);
   background: transparent;
   font-family: 'Inter', sans-serif;
   font-size: 0.85rem;
   font-weight: 600;
   cursor: pointer;
-  color: var(--ion-text-color, #222);
+  color: var(--ion-text-color, #fff);
   display: flex;
   align-items: center;
   justify-content: center;
   gap: 4px;
+}
 
+.picker-meals-header {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 6px;
 }
 
 .picker-section-label {
@@ -212,11 +242,11 @@
   text-transform: uppercase;
   letter-spacing: 0.06em;
   color: var(--ion-color-medium);
-  margin: 0 0 6px;
+  margin: 0;
 }
 
 .picker-meals-section {
-  border-top: 1px solid var(--ion-color-light-shade, #ddd);
+  border-top: 1px solid rgba(255, 255, 255, 0.1);
   padding-top: 16px;
 }
 
@@ -229,7 +259,7 @@
   transition: background 0.15s;
 
   &:hover, &:active {
-    background: var(--ion-color-light, #f4f4f4);
+    background: var(--surface-3);
   }
 }
 
@@ -238,7 +268,7 @@
   font-size: 0.85rem;
   color: var(--ion-color-medium);
   text-align: center;
-  border-top: 1px solid var(--ion-color-light-shade, #ddd);
+  border-top: 1px solid rgba(255, 255, 255, 0.1);
   padding-top: 16px;
   margin: 0;
 }
@@ -257,9 +287,9 @@
   font-size: 0.95rem;
   padding: 10px 12px;
   border-radius: 8px;
-  border: 1.5px solid var(--ion-color-medium, #92949c);
-  background: transparent;
-  color: var(--ion-text-color, #222);
+  border: 1.5px solid rgba(255, 255, 255, 0.18);
+  background: var(--surface-3);
+  color: var(--ion-text-color, #fff);
   outline: none;
 
   &:focus {

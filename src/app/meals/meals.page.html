@@ -12,36 +12,27 @@
     [debounce]="0"
   ></ion-searchbar>
 
-  <div class="meal-list" *ngIf="groupedMeals.length > 0">
-    <ng-container *ngFor="let group of groupedMeals; let last = last">
-
+  <div class="meal-list" *ngIf="filteredMeals.length > 0">
       <div
         class="meal-row"
-        *ngFor="let meal of group.meals"
+        *ngFor="let meal of filteredMeals"
         (click)="openEditor(meal)"
       >
         <span class="meal-name">{{ meal.name }}</span>
-        <app-tag-pill
-          *ngIf="group.tagId"
-          [name]="group.tagName"
-          [color]="group.tagColor"
-          size="sm"
-        ></app-tag-pill>
+        <ng-container *ngIf="getTag(meal.tagId) as tag">
+          <app-tag-pill [name]="tag.name" [color]="tag.color" size="sm"></app-tag-pill>
+        </ng-container>
         <span class="ingredient-count" *ngIf="meal.ingredients.length > 0">
           {{ meal.ingredients.length }}
         </span>
       </div>
-
-      <div class="group-divider" *ngIf="!last"></div>
-
-    </ng-container>
   </div>
 
-  <div class="empty-state" *ngIf="groupedMeals.length === 0 && !searchQuery">
+  <div class="empty-state" *ngIf="meals.length === 0 && !searchQuery">
     <p>No meals yet. Tap + to create one.</p>
   </div>
 
-  <div class="empty-state" *ngIf="groupedMeals.length === 0 && searchQuery">
+  <div class="empty-state" *ngIf="filteredMeals.length === 0 && searchQuery">
     <p>No meals match your search.</p>
   </div>
 
@@ -69,17 +60,17 @@
       <p class="panel-section-label">Tag</p>
       <div class="tag-selector">
         <button
-          class="tag-sel-pill tag-sel-pill--none"
-          [class.tag-sel-pill--selected]="editingTagId === null"
-          (click)="editingTagId = null"
-        >None</button>
-        <button
           class="tag-sel-pill"
           *ngFor="let tag of tags"
           [class.tag-sel-pill--selected]="editingTagId === tag.id"
           [style.background-color]="editingTagId === tag.id ? tag.color : ''"
-          (click)="editingTagId = tag.id"
-        >{{ tag.name }}</button>
+          [style.border-color]="tag.color"
+          [style.color]="editingTagId === tag.id ? '#fff' : tag.color"
+          (click)="editingTagId = editingTagId === tag.id ? null : tag.id"
+        >
+          <ion-icon *ngIf="editingTagId === tag.id" name="checkmark" class="pill-check"></ion-icon>
+          {{ tag.name }}
+        </button>
       </div>
 
       <p class="panel-section-label">Ingredients</p>
@@ -99,6 +90,7 @@
         <ion-button
           *ngIf="editingMealId"
           expand="block"
+          fill="outline"
           class="btn-delete"
           (click)="deleteMeal()"
         >
