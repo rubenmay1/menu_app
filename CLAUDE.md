@@ -255,6 +255,92 @@ Write-Host "Sync complete." -ForegroundColor Green
 
 ---
 
+## Current App State
+
+### Tab Structure
+Five tabs (in order): **Plan**, **Shopping**, **Meals**, **Tags**, **Settings**.
+All pages share an identical `<ion-header>` with `<span class="app-title">Menu</span>` inside `ion-title`. Never use a page-specific title — the tab bar selection is the navigation indicator.
+
+### Plan Page
+- **Week view**: Mon–Sun as vertical cards, ISO 8601 week numbering, swipe left/right to change week.
+- **Day cards**: header row (day name + date) + sub-item list. No add button on card.
+- **Long-press (500 ms) on header row** → opens day editor bottom panel (add/delete/reorder items for that day).
+- **Tap a sub-item** → opens a stub popup (centered modal, `z-index: 2000`). To be built out.
+- **No day-level tag** — tags are on sub-menu items only, not on the day itself.
+
+### Tags Page
+- Tags are global (not per-week): `id`, `name`, `color`.
+- Tag list shows pills. **Long-press a pill** → edit panel (name + color picker + Save + Delete).
+- FAB `+` button hides when any panel is open.
+- **No swipe-to-delete** — editing and deletion happen inside the long-press editor panel.
+
+### Data / Storage (localStorage keys)
+| Key | Value | Notes |
+|---|---|---|
+| `tags` | JSON `Tag[]` | Global tag list |
+| `menu-items-{year}-{week}-{dayIndex}` | JSON `MenuItem[]` | Per specific calendar day |
+
+### Shared Utilities
+- `src/app/shared/week-utils.ts` — pure ISO week helpers (`getISOWeek`, `getISOWeekYear`, `getMondayOfISOWeek`, `formatShortDate`).
+- `src/app/shared/tag-pill.component.ts` — `<app-tag-pill name color size>`. Sizes: `'sm'` (default, inline) and `'md'` (tags list). Exported from `SharedModule`.
+- `SharedModule` must be imported by any feature module that uses `app-tag-pill`.
+
+---
+
+## Design System
+
+### Typography
+| Use | Font | Weight | Notes |
+|---|---|---|---|
+| App title ("MENU") | Barrio | — | `.app-title` class in global.scss |
+| Section/panel titles, day names, week label | Inter | 600 | |
+| Body text, notes, dates, labels, inputs | Inter | 400–600 | |
+
+Google Fonts loaded in `src/index.html`: `Barrio`, `Inter:wght@400;500;600`.
+
+### Colour Palette
+16 preset pastel hex values defined as `PRESET_COLORS` in `src/app/plan/plan.models.ts`. This is the single source of truth — import from there whenever a colour picker is needed.
+
+### Interaction Patterns
+**Long-press**: `pointerdown` starts a 500 ms `setTimeout`; `pointerup` / `pointerleave` cancel it via `clearTimeout`. Store timers in a `Map<key, timer>` when multiple elements can be pressed simultaneously; a single `ReturnType<typeof setTimeout> | null` field when only one element can be pressed at a time.
+
+**Bottom panel (bottom sheet)**: `position: fixed; inset: 0; z-index: 1000` backdrop + slide-up panel with `border-radius: 16px 16px 0 0`. Clicking the backdrop closes it.
+
+**Centered modal (popup)**: `position: fixed; inset: 0; z-index: 2000; align-items: center; justify-content: center`. Higher z-index than bottom panels so it sits above them.
+
+**Week swipe gesture**: `touchstart`/`touchend` listeners on the `IonContent` element. 60 px horizontal threshold, 0.5 max vertical ratio guard. Registered as `{ passive: true }`.
+
+**Drag reorder**: Use `<ion-reorder-group>` + `<ion-reorder>` (available via `IonicModule`, no extra package). In the `(ionItemReorder)` handler call `event.detail.complete(myArray)` — it returns the reordered array and reverts the DOM animation so Angular can re-render.
+
+### Standard Delete Button
+Apply `class="btn-delete"` to any `ion-button` for a solid pinky-red destructive action style. Defined in `src/global.scss`:
+- Background: `#e05c72`
+- Always include `<ion-icon slot="start" name="trash-outline"></ion-icon>` for consistency.
+
+### FAB Visibility
+Hide FABs when panels are open: `*ngIf="!panelAVisible && !panelBVisible"`.
+
+---
+
+## Angular / Ionic Gotchas
+
+### Angular 20 — `standalone: false` required
+Angular 20 defaults to standalone components. All components in this project use **NgModule architecture** (`standalone: false`). Every `@Component` must explicitly declare `standalone: false`, otherwise NgModule declarations fail with `NG6008`.
+
+### Ionic Shadow DOM — `ion-title`
+Do **not** use `ion-title::part(native)` to style the title text — it is unreliable with Ionic's shadow DOM. Instead put a `<span class="app-title">` directly inside `<ion-title>` (light DOM) and style the span.
+
+### Style Binding — clear with `''` not `null`
+When conditionally clearing an inline style, use `[style.background-color]="condition ? value : ''"`. Using `null` has inconsistent cross-browser behaviour in Angular style bindings and may leave the stale style applied.
+
+### Component Style Budget
+`anyComponentStyle` budget raised to `6 kb` warning / `10 kb` error in `angular.json`. Do not lower it.
+
+### `ionViewWillEnter` for cross-tab freshness
+Use `ionViewWillEnter()` (not `ngOnInit`) to refresh data that may have changed on another tab. Example: Plan page re-resolves tag names/colours when returning from the Tags tab.
+
+---
+
 ## Coding Conventions
 
 - Always use **explicit TypeScript types** — avoid `any`

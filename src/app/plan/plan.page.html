@@ -1,0 +1,129 @@
+<ion-header>
+  <ion-toolbar color="primary">
+    <ion-title><span class="app-title">Menu</span></ion-title>
+  </ion-toolbar>
+</ion-header>
+
+<ion-content #contentRef>
+
+  <div class="week-header">
+    <ion-button fill="clear" (click)="goToPreviousWeek()">
+      <ion-icon slot="icon-only" name="chevron-back-outline"></ion-icon>
+    </ion-button>
+    <span class="week-label">Week {{ week.isoWeek }}</span>
+    <ion-button fill="clear" (click)="goToNextWeek()">
+      <ion-icon slot="icon-only" name="chevron-forward-outline"></ion-icon>
+    </ion-button>
+  </div>
+
+  <div class="day-list">
+    <div class="day-card" *ngFor="let day of week.days; let i = index">
+
+      <div class="day-header"
+        (pointerdown)="onDayPointerDown(i)"
+        (pointerup)="onDayPointerUp(i)"
+        (pointerleave)="onDayPointerLeave(i)"
+        (contextmenu)="$event.preventDefault()"
+      >
+        <span class="day-name">{{ day.dayName }}</span>
+        <span class="day-date">{{ day.displayDate }}</span>
+      </div>
+
+      <div class="item-list" *ngIf="day.items.length > 0">
+        <div class="menu-item" *ngFor="let item of day.items" (click)="openItemPopup(item, i)">
+          <ion-icon *ngIf="item.starred" name="star" class="item-star"></ion-icon>
+          <span class="item-name">{{ item.name || '—' }}</span>
+          <span class="item-meal-name" *ngIf="item.mealName && !item.starred">{{ item.mealName }}</span>
+          <ng-container *ngIf="item.resolvedTags?.length">
+            <app-tag-pill *ngFor="let t of item.resolvedTags" [name]="t.name" [color]="t.color"></app-tag-pill>
+          </ng-container>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- Day editor (long-press) -->
+  <div class="backdrop" *ngIf="dayEditorVisible" (click)="closeDayEditor()">
+    <div class="bottom-panel" (click)="$event.stopPropagation()">
+
+      <p class="panel-title">{{ editorDay?.dayName }}</p>
+
+      <app-item-editor
+        [items]="editorDay?.items || []"
+        [tags]="tags"
+        [showTags]="true"
+        [allowReorder]="true"
+        addLabel="Add item"
+        placeholder="Item name…"
+        (itemAdd)="onItemAdd($event)"
+        (itemRemove)="removeItem($event)"
+        (itemsReorder)="handleReorder($event)"
+      ></app-item-editor>
+
+    </div>
+  </div>
+
+  <!-- Item picker popup (tap) -->
+  <div class="picker-backdrop" *ngIf="itemPopupVisible" (click)="closeItemPopup()">
+    <div class="picker-popup" (click)="$event.stopPropagation()">
+
+      <button class="picker-close" (click)="closeItemPopup()">
+        <ion-icon name="close"></ion-icon>
+      </button>
+
+      <p class="picker-current-name">
+        <ion-icon *ngIf="itemPopupItem?.starred" name="star" class="picker-star-indicator"></ion-icon>
+        {{ itemPopupItem?.name || '—' }}
+        <span *ngIf="itemPopupItem?.mealName && !itemPopupItem?.starred" class="picker-meal-label">{{ itemPopupItem?.mealName }}</span>
+      </p>
+
+      <!-- Default mode -->
+      <ng-container *ngIf="pickerMode === 'default'">
+
+        <div class="picker-actions">
+          <button class="picker-action-btn" (click)="setBlank()">None</button>
+          <button class="picker-action-btn" (click)="openCustomMode()">Custom</button>
+        </div>
+
+        <div *ngIf="pickerMeals.length > 0" class="picker-meals-section">
+          <p class="picker-section-label">From Meals<span *ngIf="pickerTagLabel"> — {{ pickerTagLabel }}</span></p>
+          <div class="picker-meal-row" *ngFor="let meal of pickerMeals" (click)="selectMeal(meal)">
+            {{ meal.name }}
+          </div>
+        </div>
+
+        <p class="picker-no-meals" *ngIf="pickerMeals.length === 0">
+          {{ itemPopupItem?.tagIds?.length ? 'No meals with this tag yet.' : 'No meals yet.' }}
+        </p>
+
+      </ng-container>
+
+      <!-- Custom mode -->
+      <ng-container *ngIf="pickerMode === 'custom'">
+        <div class="custom-row">
+          <input
+            class="custom-input"
+            [(ngModel)]="customName"
+            placeholder="Meal name…"
+            (keyup.enter)="saveCustom()"
+            autofocus
+          />
+          <button class="star-btn" (click)="toggleCustomStar()" [class.star-btn--active]="customStarred">
+            <ion-icon [name]="customStarred ? 'star' : 'star-outline'"></ion-icon>
+          </button>
+        </div>
+        <ion-button
+          expand="block"
+          class="custom-save-btn"
+          (click)="saveCustom()"
+          [disabled]="!customName.trim()"
+        >
+          Add to Plan
+        </ion-button>
+      </ng-container>
+
+    </div>
+  </div>
+
+</ion-content>

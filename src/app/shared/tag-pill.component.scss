@@ -1,0 +1,16 @@
+.tag-pill {
+  display: inline-flex;
+  align-items: center;
+  padding: 3px 10px;
+  border-radius: 999px;
+  font-family: 'Inter', sans-serif;
+  font-size: 0.75rem;
+  font-weight: 400;
+  color: #ffffff;
+  white-space: nowrap;
+
+  &--md {
+    padding: 5px 14px;
+    font-size: 0.88rem;
+  }
+}

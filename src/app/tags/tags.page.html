@@ -1,0 +1,118 @@
+<ion-header>
+  <ion-toolbar color="primary">
+    <ion-title><span class="app-title">Menu</span></ion-title>
+  </ion-toolbar>
+</ion-header>
+
+<ion-content>
+
+  <ion-searchbar
+    (ionInput)="onSearchInput($event)"
+    placeholder="Search tags…"
+    [debounce]="0"
+  ></ion-searchbar>
+
+  <div class="tag-list" *ngIf="filteredTags.length > 0">
+    <div
+      class="tag-row"
+      *ngFor="let tag of filteredTags"
+      (click)="openEditor(tag)"
+    >
+      <app-tag-pill [name]="tag.name" [color]="tag.color" size="md"></app-tag-pill>
+    </div>
+  </div>
+
+  <div class="empty-state" *ngIf="filteredTags.length === 0 && !searchQuery">
+    <p>No tags yet. Tap + to create one.</p>
+  </div>
+
+  <div class="empty-state" *ngIf="filteredTags.length === 0 && searchQuery">
+    <p>No tags match your search.</p>
+  </div>
+
+  <ion-fab vertical="bottom" horizontal="center" slot="fixed" style="bottom: 48px"
+    *ngIf="!creatorVisible && !editorVisible">
+    <ion-fab-button (click)="openCreator()">
+      <ion-icon name="add"></ion-icon>
+    </ion-fab-button>
+  </ion-fab>
+
+  <!-- Creator panel -->
+  <div class="backdrop" *ngIf="creatorVisible" (click)="closeCreator()">
+    <div class="bottom-panel" (click)="$event.stopPropagation()">
+
+      <p class="panel-title">New tag</p>
+
+      <input
+        class="name-input"
+        [(ngModel)]="newTagName"
+        placeholder="Tag name…"
+        type="text"
+        maxlength="30"
+      />
+
+      <div class="preview-row" *ngIf="newTagName.trim()">
+        <app-tag-pill [name]="newTagName.trim()" [color]="newTagColor" size="md"></app-tag-pill>
+      </div>
+
+      <div class="color-grid">
+        <button
+          *ngFor="let color of presetColors"
+          class="color-swatch"
+          [class.selected]="newTagColor === color"
+          [style.background-color]="color"
+          (click)="newTagColor = color"
+        ></button>
+      </div>
+
+      <ion-button expand="block" (click)="saveNewTag()">
+        <ion-icon slot="start" name="checkmark-outline"></ion-icon>
+        Save
+      </ion-button>
+
+    </div>
+  </div>
+
+  <!-- Editor panel -->
+  <div class="backdrop" *ngIf="editorVisible" (click)="closeEditor()">
+    <div class="bottom-panel" (click)="$event.stopPropagation()">
+
+      <p class="panel-title">Edit tag</p>
+
+      <input
+        class="name-input"
+        [(ngModel)]="editingName"
+        placeholder="Tag name…"
+        type="text"
+        maxlength="30"
+      />
+
+      <div class="preview-row" *ngIf="editingName.trim()">
+        <app-tag-pill [name]="editingName.trim()" [color]="editingColor" size="md"></app-tag-pill>
+      </div>
+
+      <div class="color-grid">
+        <button
+          *ngFor="let color of presetColors"
+          class="color-swatch"
+          [class.selected]="editingColor === color"
+          [style.background-color]="color"
+          (click)="editingColor = color"
+        ></button>
+      </div>
+
+      <div class="panel-actions">
+        <ion-button expand="block" (click)="saveEdit()">
+          <ion-icon slot="start" name="checkmark-outline"></ion-icon>
+          Save
+        </ion-button>
+        <ion-button expand="block" class="btn-delete" (click)="deleteTag()">
+          <ion-icon slot="start" name="trash-outline"></ion-icon>
+          Delete
+        </ion-button>
+      </div>
+
+    </div>
+  </div>
+
+</ion-content>

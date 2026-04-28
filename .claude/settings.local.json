@@ -1,0 +1,15 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(npm --version)",
+      "Bash(ionic --version)",
+      "Bash(ng version *)",
+      "Bash(npm show *)",
+      "Read(//e/Documents/Coding/**)",
+      "Bash(ionic start *)",
+      "Bash(node *)",
+      "Bash(npx ng *)",
+      "Bash(npx tsc *)"
+    ]
+  }
+}

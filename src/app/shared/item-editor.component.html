@@ -1,0 +1,50 @@
+<div class="editor-items" *ngIf="items.length > 0">
+
+  <ng-container *ngIf="allowReorder">
+    <ion-reorder-group [disabled]="false" (ionItemReorder)="onReorder($event)">
+      <div class="editor-item" *ngFor="let item of items">
+        <ion-reorder class="reorder-handle"></ion-reorder>
+        <span class="editor-item-name">{{ item.name }}</span>
+        <ng-container *ngIf="showTags && item.resolvedTags?.length">
+          <app-tag-pill *ngFor="let t of item.resolvedTags" [name]="t.name" [color]="t.color"></app-tag-pill>
+        </ng-container>
+        <button class="editor-item-delete" (click)="onRemove(item.id)" aria-label="Delete">
+          <ion-icon name="trash-outline"></ion-icon>
+        </button>
+      </div>
+    </ion-reorder-group>
+  </ng-container>
+
+  <ng-container *ngIf="!allowReorder">
+    <div class="editor-item" *ngFor="let item of items">
+      <span class="editor-item-name">{{ item.name }}</span>
+      <button class="editor-item-delete" (click)="onRemove(item.id)" aria-label="Delete">
+        <ion-icon name="trash-outline"></ion-icon>
+      </button>
+    </div>
+  </ng-container>
+
+</div>
+
+<p class="section-label" *ngIf="addLabel">{{ addLabel }}</p>
+
+<input
+  class="text-input"
+  [(ngModel)]="newItemName"
+  [placeholder]="placeholder"
+  type="text"
+  maxlength="60"
+  (keydown)="onKeydown($event)"
+/>
+
+<div class="tag-selector" *ngIf="showTags && tags.length > 0">
+  <button
+    *ngFor="let tag of tags"
+    class="tag-sel-pill"
+    [class.tag-sel-pill--selected]="isTagSelected(tag.id)"
+    [style.background-color]="isTagSelected(tag.id) ? tag.color : ''"
+    (click)="toggleTag(tag.id)"
+  >{{ tag.name }}</button>
+</div>
+
+<ion-button expand="block" (click)="onAdd()">Add</ion-button>
