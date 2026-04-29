@@ -1,8 +1,4 @@
-<ion-header>
-  <ion-toolbar color="primary">
-    <ion-title><span class="app-title">Menu</span></ion-title>
-  </ion-toolbar>
-</ion-header>
+<app-header></app-header>
 
 <ion-content>
 
@@ -38,7 +34,7 @@
   </div>
 
   <div class="empty-state" *ngIf="meals.length === 0 && !searchQuery">
-    <p>No meals yet. Long-press to edit, tap to view recipe.</p>
+    <p>No meals yet. Tap + to create one.</p>
   </div>
 
   <div class="empty-state" *ngIf="filteredMeals.length === 0 && searchQuery">
@@ -68,6 +64,7 @@
       />
 
       <p class="panel-section-label">Tags (optional)</p>
+      <p class="no-tags-hint" *ngIf="tags.length === 0">No tags available</p>
       <div class="tag-selector">
         <button
           class="tag-sel-pill"

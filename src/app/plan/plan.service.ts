@@ -10,6 +10,7 @@ export class PlanService {
   setSubMenus(dayIndex: number, items: SubMenu[]): Promise<void> { return this.db.setSubMenus(dayIndex, items); }
   getWeekMeals(year: number, week: number, dayIndex: number): Promise<WeekMealEntry[]> { return this.db.getWeekMeals(year, week, dayIndex); }
   setWeekMeals(year: number, week: number, dayIndex: number, entries: WeekMealEntry[]): Promise<void> { return this.db.setWeekMeals(year, week, dayIndex, entries); }
+  deleteSubMenuHistory(itemId: string, dayIndex: number): Promise<void> { return this.db.deleteSubMenuHistory(itemId, dayIndex); }
 
   async getMenuItems(year: number, week: number, dayIndex: number): Promise<MenuItem[]> {
     const submenus = await this.db.getSubMenus(dayIndex);

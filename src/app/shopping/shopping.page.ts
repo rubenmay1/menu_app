@@ -4,6 +4,7 @@ import { PlanService } from '../plan/plan.service';
 import { MealService } from '../meals/meal.service';
 import { Meal } from '../meals/meal.model';
 import { getISOWeek, getISOWeekYear } from '../shared/week-utils';
+import { WeekStateService } from '../shared/week-state.service';
 
 interface ShoppingItem {
   key: string;
@@ -30,7 +31,8 @@ export class ShoppingPage implements AfterViewInit {
 
   constructor(
     private readonly planService: PlanService,
-    private readonly mealService: MealService
+    private readonly mealService: MealService,
+    private readonly weekState: WeekStateService
   ) {}
 
   ngAfterViewInit(): void {
@@ -38,12 +40,7 @@ export class ShoppingPage implements AfterViewInit {
   }
 
   async ionViewWillEnter(): Promise<void> {
-    if (!this.week) {
-      const today = new Date();
-      await this.loadWeek(getISOWeekYear(today), getISOWeek(today));
-    } else {
-      await this.loadWeek(this.week.year, this.week.isoWeek);
-    }
+    await this.loadWeek(this.weekState.year, this.weekState.isoWeek);
   }
 
   async goToPreviousWeek(): Promise<void> {
@@ -67,28 +64,40 @@ export class ShoppingPage implements AfterViewInit {
     }
   }
 
+  async goToCurrentWeek(): Promise<void> {
+    const today = new Date();
+    await this.loadWeek(getISOWeekYear(today), getISOWeek(today));
+  }
+
   private getLastISOWeekOfYear(year: number): number {
     return getISOWeek(new Date(Date.UTC(year, 11, 28)));
   }
 
   private async loadWeek(year: number, isoWeek: number): Promise<void> {
+    this.weekState.setWeek(year, isoWeek);
     this.week = { year, isoWeek };
     const meals = await this.mealService.getMeals();
     const mealByName = new Map<string, Meal>(meals.map(m => [m.name.toLowerCase(), m]));
     const doneKeys = this.loadDoneKeys(year, isoWeek);
-    const seen = new Set<string>();
     const allItems: ShoppingItem[] = [];
 
     for (let dayIndex = 0; dayIndex < DAY_COUNT; dayIndex++) {
       const menuItems = await this.planService.getMenuItems(year, isoWeek, dayIndex);
       for (const menuItem of menuItems) {
-        if (!menuItem.mealName || menuItem.mealName === '--' || menuItem.mealName === '') continue;
+        if (!menuItem.mealName || menuItem.mealName === '--' || menuItem.mealName === '' || menuItem.mealName === 'None') continue;
         const meal = mealByName.get(menuItem.mealName.toLowerCase());
-        if (!meal || meal.ingredients.length === 0) continue;
+        if (!meal || meal.ingredients.length === 0) {
+          const key = `no-ingredients-${menuItem.id}`;
+          allItems.push({
+            key,
+            ingredientName: `Ingredients for ${menuItem.mealName}`,
+            mealName: menuItem.mealName,
+            done: doneKeys.has(key)
+          });
+          continue;
+        }
         for (const ingredient of meal.ingredients) {
-          const key = `${meal.id}-${ingredient.id}`;
-          if (seen.has(key)) continue;
-          seen.add(key);
+          const key = `${meal.id}-${ingredient.id}-${menuItem.id}`;
           allItems.push({
             key,
             ingredientName: ingredient.name,

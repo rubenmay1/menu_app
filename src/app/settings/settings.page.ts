@@ -1,4 +1,5 @@
-import { Component } from '@angular/core';
+import { Component, OnDestroy } from '@angular/core';
+import { Subscription } from 'rxjs';
 import { AlertController } from '@ionic/angular';
 import { DropboxService } from '../shared/dropbox.service';
 
@@ -8,15 +9,24 @@ import { DropboxService } from '../shared/dropbox.service';
   templateUrl: './settings.page.html',
   styleUrls: ['./settings.page.scss'],
 })
-export class SettingsPage {
+export class SettingsPage implements OnDestroy {
 
   isSyncing = false;
   isRestoring = false;
+  isConnecting = false;
+
+  private connectSub: Subscription;
 
   constructor(
     public dropbox: DropboxService,
     private alertCtrl: AlertController,
-  ) {}
+  ) {
+    this.connectSub = this.dropbox.connecting$.subscribe(v => { this.isConnecting = v; });
+  }
+
+  ngOnDestroy(): void {
+    this.connectSub.unsubscribe();
+  }
 
   get lastSyncLabel(): string {
     const t = this.dropbox.getLastSyncTime();

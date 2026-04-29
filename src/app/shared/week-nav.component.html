@@ -1,0 +1,15 @@
+<div class="week-header">
+  <ion-button fill="clear" (click)="previousWeek.emit()">
+    <ion-icon slot="icon-only" name="chevron-back-outline"></ion-icon>
+  </ion-button>
+  <div class="week-label" (click)="currentWeek.emit()">
+    <span class="week-number">
+      Week {{ isoWeek }}
+      <ion-icon *ngIf="isComplete" name="checkmark-done-outline" class="week-complete-tick"></ion-icon>
+    </span>
+    <span class="week-year">{{ year }}</span>
+  </div>
+  <ion-button fill="clear" (click)="nextWeek.emit()">
+    <ion-icon slot="icon-only" name="chevron-forward-outline"></ion-icon>
+  </ion-button>
+</div>

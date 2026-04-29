@@ -1,22 +1,16 @@
-<ion-header>
-  <ion-toolbar color="primary">
-    <ion-title><span class="app-title">Menu</span></ion-title>
-  </ion-toolbar>
-</ion-header>
+<app-header></app-header>
 
 <ion-content #contentRef>
 
   <ng-container *ngIf="week">
 
-    <div class="week-header">
-      <ion-button fill="clear" (click)="goToPreviousWeek()">
-        <ion-icon slot="icon-only" name="chevron-back-outline"></ion-icon>
-      </ion-button>
-      <span class="week-label">Week {{ week.isoWeek }}</span>
-      <ion-button fill="clear" (click)="goToNextWeek()">
-        <ion-icon slot="icon-only" name="chevron-forward-outline"></ion-icon>
-      </ion-button>
-    </div>
+    <app-week-nav
+      [isoWeek]="week.isoWeek"
+      [year]="week.year"
+      (previousWeek)="goToPreviousWeek()"
+      (nextWeek)="goToNextWeek()"
+      (currentWeek)="goToCurrentWeek()"
+    ></app-week-nav>
 
     <div class="list-container">
 

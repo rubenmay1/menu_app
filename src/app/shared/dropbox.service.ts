@@ -1,4 +1,5 @@
 import { Injectable } from '@angular/core';
+import { BehaviorSubject, Observable } from 'rxjs';
 import { Capacitor } from '@capacitor/core';
 import { Browser } from '@capacitor/browser';
 import { DbService } from './db.service';
@@ -17,6 +18,10 @@ const BACKUP_PATH = '/menu-backup.json';
 
 @Injectable({ providedIn: 'root' })
 export class DropboxService {
+
+  private readonly connectingSubject = new BehaviorSubject<boolean>(false);
+  readonly connecting$: Observable<boolean> = this.connectingSubject.asObservable();
+  private connectTimeout: ReturnType<typeof setTimeout> | null = null;
 
   constructor(private db: DbService) {}
 
@@ -44,24 +49,34 @@ export class DropboxService {
   }
 
   async connect(): Promise<void> {
-    const verifier = this.generateCodeVerifier();
-    const challenge = await this.generateCodeChallenge(verifier);
-    localStorage.setItem(LS_VERIFIER, verifier);
+    this.connectingSubject.next(true);
+    this.connectTimeout = setTimeout(() => {
+      this.clearConnecting();
+    }, 30000);
 
-    const params = new URLSearchParams({
-      client_id: APP_KEY,
-      response_type: 'code',
-      redirect_uri: this.redirectUri,
-      code_challenge: challenge,
-      code_challenge_method: 'S256',
-      token_access_type: 'offline',
-    });
+    try {
+      const verifier = this.generateCodeVerifier();
+      const challenge = await this.generateCodeChallenge(verifier);
+      localStorage.setItem(LS_VERIFIER, verifier);
 
-    const authUrl = `https://www.dropbox.com/oauth2/authorize?${params}`;
-    if (Capacitor.isNativePlatform()) {
-      await Browser.open({ url: authUrl });
-    } else {
-      window.location.href = authUrl;
+      const params = new URLSearchParams({
+        client_id: APP_KEY,
+        response_type: 'code',
+        redirect_uri: this.redirectUri,
+        code_challenge: challenge,
+        code_challenge_method: 'S256',
+        token_access_type: 'offline',
+      });
+
+      const authUrl = `https://www.dropbox.com/oauth2/authorize?${params}`;
+      if (Capacitor.isNativePlatform()) {
+        await Browser.open({ url: authUrl });
+      } else {
+        window.location.href = authUrl;
+      }
+    } catch (e) {
+      this.clearConnecting();
+      throw e;
     }
   }
 
@@ -102,6 +117,16 @@ export class DropboxService {
     if (Capacitor.isNativePlatform()) {
       try { await Browser.close(); } catch { /* ignore if already closed */ }
     }
+
+    this.clearConnecting();
+  }
+
+  private clearConnecting(): void {
+    if (this.connectTimeout !== null) {
+      clearTimeout(this.connectTimeout);
+      this.connectTimeout = null;
+    }
+    this.connectingSubject.next(false);
   }
 
   disconnect(): void {
@@ -125,9 +150,7 @@ export class DropboxService {
     });
 
     if (!res.ok) {
-      const err = await res.json().catch(() => ({}) as Record<string, unknown>);
-      const summary = ((err as Record<string, unknown>)['error_summary'] as string | undefined) ?? res.statusText;
-      throw new Error(`Dropbox sync failed: ${summary}`);
+      throw new Error(`Dropbox sync failed: ${await this.extractErrorMessage(res)}`);
     }
 
     localStorage.setItem(LS_LAST_SYNC, new Date().toISOString());
@@ -145,9 +168,7 @@ export class DropboxService {
     });
 
     if (!res.ok) {
-      const err = await res.json().catch(() => ({}) as Record<string, unknown>);
-      const summary = ((err as Record<string, unknown>)['error_summary'] as string | undefined) ?? res.statusText;
-      throw new Error(`Dropbox restore failed: ${summary}`);
+      throw new Error(`Dropbox restore failed: ${await this.extractErrorMessage(res)}`);
     }
 
     const json = await res.text();
@@ -184,6 +205,18 @@ export class DropboxService {
     const result = await res.json() as { access_token: string };
     localStorage.setItem(LS_TOKEN, result.access_token);
     return result.access_token;
+  }
+
+  private async extractErrorMessage(res: Response): Promise<string> {
+    const body = await res.text().catch(() => '');
+    let summary: string | undefined;
+    try {
+      const json = JSON.parse(body) as Record<string, unknown>;
+      summary = (json['error_summary'] as string | undefined)
+        ?? (json['error_description'] as string | undefined)
+        ?? (json['error'] as string | undefined);
+    } catch { /* not JSON */ }
+    return (summary ?? body.slice(0, 200)) || `HTTP ${res.status}`;
   }
 
   private generateCodeVerifier(): string {

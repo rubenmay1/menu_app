@@ -1,4 +1,4 @@
-import { Component, OnInit, AfterViewInit, ViewChild, ElementRef } from '@angular/core';
+import { Component, OnInit, AfterViewInit, AfterViewChecked, ViewChild, ViewChildren, QueryList, ElementRef } from '@angular/core';
 import { IonContent } from '@ionic/angular';
 import { DayEntry, WeekState, MenuItem, ResolvedMenuItem } from './plan.models';
 import { PlanService } from './plan.service';
@@ -8,6 +8,7 @@ import { EditorItem } from '../shared/item-editor.component';
 import { MealService } from '../meals/meal.service';
 import { Meal } from '../meals/meal.model';
 import { getISOWeek, getISOWeekYear, getMondayOfISOWeek, formatShortDate } from '../shared/week-utils';
+import { WeekStateService } from '../shared/week-state.service';
 
 const DAY_NAMES: string[] = [
   'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'
@@ -19,9 +20,14 @@ const DAY_NAMES: string[] = [
   templateUrl: './plan.page.html',
   styleUrls: ['./plan.page.scss']
 })
-export class PlanPage implements OnInit, AfterViewInit {
+export class PlanPage implements OnInit, AfterViewInit, AfterViewChecked {
 
   @ViewChild(IonContent, { read: ElementRef }) private contentRef!: ElementRef;
+  @ViewChildren('mealNameEl') private mealNameEls!: QueryList<ElementRef>;
+
+  readonly tagVisibility: Map<string, number> = new Map();
+  private tagVisibilityCheckPending = false;
+  private tagVisibilityCheckScheduled = false;
 
   week!: WeekState;
   tags: Tag[] = [];
@@ -50,22 +56,57 @@ export class PlanPage implements OnInit, AfterViewInit {
   constructor(
     private readonly planService: PlanService,
     private readonly tagService: TagService,
-    private readonly mealService: MealService
+    private readonly mealService: MealService,
+    private readonly weekState: WeekStateService
   ) {}
 
   async ngOnInit(): Promise<void> {
-    const today = new Date();
-    await this.loadWeek(getISOWeekYear(today), getISOWeek(today));
+    await this.loadWeek(this.weekState.year, this.weekState.isoWeek);
   }
 
   ngAfterViewInit(): void {
     this.setupSwipeGesture();
   }
 
+  ngAfterViewChecked(): void {
+    if (!this.tagVisibilityCheckPending || this.tagVisibilityCheckScheduled) return;
+    this.tagVisibilityCheckScheduled = true;
+    setTimeout(() => {
+      this.tagVisibilityCheckScheduled = false;
+      let changed = false;
+      for (const elRef of this.mealNameEls ?? []) {
+        const el = elRef.nativeElement as HTMLElement;
+        const itemId = el.getAttribute('data-item-id') ?? '';
+        if (el.scrollHeight > el.clientHeight + 1) {
+          const count = this.tagVisibility.get(itemId) ?? 0;
+          if (count > 0) {
+            this.tagVisibility.set(itemId, count - 1);
+            changed = true;
+          }
+        }
+      }
+      if (!changed) this.tagVisibilityCheckPending = false;
+    }, 0);
+  }
+
+  private initTagVisibility(): void {
+    for (const day of this.week?.days ?? []) {
+      for (const item of day.items) {
+        this.tagVisibility.set(item.id, item.resolvedTags.length);
+      }
+    }
+    this.tagVisibilityCheckPending = true;
+  }
+
   async ionViewWillEnter(): Promise<void> {
-    if (this.week) {
+    if (this.week &&
+        this.week.year === this.weekState.year &&
+        this.week.isoWeek === this.weekState.isoWeek) {
       this.tags = await this.tagService.getTags();
       this.week = { ...this.week, days: this.week.days.map(day => this.resolveDay(day)) };
+      this.initTagVisibility();
+    } else {
+      await this.loadWeek(this.weekState.year, this.weekState.isoWeek);
     }
   }
 
@@ -183,6 +224,7 @@ export class PlanPage implements OnInit, AfterViewInit {
   }
 
   private async loadWeek(year: number, isoWeek: number): Promise<void> {
+    this.weekState.setWeek(year, isoWeek);
     this.tags = await this.tagService.getTags();
     const monday = getMondayOfISOWeek(year, isoWeek);
     const days = await Promise.all(DAY_NAMES.map(async (name, i) => {
@@ -197,6 +239,7 @@ export class PlanPage implements OnInit, AfterViewInit {
       };
     }));
     this.week = { year, isoWeek, days };
+    this.initTagVisibility();
   }
 
   onDayPointerDown(dayIndex: number): void {
@@ -274,17 +317,35 @@ export class PlanPage implements OnInit, AfterViewInit {
       ...this.week.days[dayIdx],
       items: this.resolveItems(await this.planService.getMenuItems(year, isoWeek, dayIdx))
     };
+    this.initTagVisibility();
   }
 
   async removeItem(itemId: string): Promise<void> {
     const dayIdx = this.dayEditorIndex;
     const submenus = (await this.planService.getSubMenus(dayIdx)).filter(it => it.id !== itemId);
     await this.planService.setSubMenus(dayIdx, submenus);
+    await this.planService.deleteSubMenuHistory(itemId, dayIdx);
     const { year, isoWeek } = this.week;
     this.week.days[dayIdx] = {
       ...this.week.days[dayIdx],
       items: this.resolveItems(await this.planService.getMenuItems(year, isoWeek, dayIdx))
     };
+    this.initTagVisibility();
+  }
+
+  async onItemUpdate(event: { id: string; name: string; tagIds: string[] }): Promise<void> {
+    const dayIdx = this.dayEditorIndex;
+    const submenus = await this.planService.getSubMenus(dayIdx);
+    const idx = submenus.findIndex(s => s.id === event.id);
+    if (idx < 0) return;
+    submenus[idx] = { ...submenus[idx], name: event.name, tagIds: event.tagIds };
+    await this.planService.setSubMenus(dayIdx, submenus);
+    const { year, isoWeek } = this.week;
+    this.week.days[dayIdx] = {
+      ...this.week.days[dayIdx],
+      items: this.resolveItems(await this.planService.getMenuItems(year, isoWeek, dayIdx))
+    };
+    this.initTagVisibility();
   }
 
   async handleReorder(reordered: EditorItem[]): Promise<void> {
@@ -304,6 +365,7 @@ export class PlanPage implements OnInit, AfterViewInit {
     await this.planService.setSubMenus(dayIdx,
       items.map(it => ({ id: it.id, name: it.name, tagIds: it.tagIds }))
     );
+    this.initTagVisibility();
   }
 
   async openItemPopup(item: ResolvedMenuItem, dayIndex: number): Promise<void> {
@@ -401,5 +463,6 @@ export class PlanPage implements OnInit, AfterViewInit {
       ...this.week.days[dayIndex],
       items: this.resolveItems(await this.planService.getMenuItems(year, isoWeek, dayIndex))
     };
+    this.initTagVisibility();
   }
 }

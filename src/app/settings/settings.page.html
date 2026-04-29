@@ -1,8 +1,4 @@
-<ion-header>
-  <ion-toolbar color="primary">
-    <ion-title><span class="app-title">Menu</span></ion-title>
-  </ion-toolbar>
-</ion-header>
+<app-header></app-header>
 
 <ion-content>
   <div class="section">
@@ -10,9 +6,10 @@
 
     <div class="card" *ngIf="!dropbox.isConnected()">
       <p class="hint">Connect Dropbox to back up and restore your data.</p>
-      <ion-button expand="block" (click)="connectDropbox()">
-        <ion-icon slot="start" name="logo-dropbox"></ion-icon>
-        Connect to Dropbox
+      <ion-button expand="block" (click)="connectDropbox()" [disabled]="isConnecting">
+        <ion-spinner *ngIf="isConnecting" slot="start" name="crescent"></ion-spinner>
+        <ion-icon *ngIf="!isConnecting" slot="start" name="logo-dropbox"></ion-icon>
+        {{ isConnecting ? 'Connecting…' : 'Connect to Dropbox' }}
       </ion-button>
     </div>
 

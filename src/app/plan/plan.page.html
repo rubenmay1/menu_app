@@ -1,28 +1,17 @@
-<ion-header>
-  <ion-toolbar color="primary">
-    <ion-title><span class="app-title">Menu</span></ion-title>
-  </ion-toolbar>
-</ion-header>
+<app-header></app-header>
 
 <ion-content #contentRef>
 
   <ng-container *ngIf="week">
 
-  <div class="week-header">
-    <ion-button fill="clear" (click)="goToPreviousWeek()">
-      <ion-icon slot="icon-only" name="chevron-back-outline"></ion-icon>
-    </ion-button>
-    <div class="week-label" (click)="goToCurrentWeek()">
-      <span class="week-number">
-        Week {{ week.isoWeek }}
-        <ion-icon *ngIf="isWeekComplete" name="checkmark-done-outline" class="week-complete-tick"></ion-icon>
-      </span>
-      <span class="week-year">{{ week.year }}</span>
-    </div>
-    <ion-button fill="clear" (click)="goToNextWeek()">
-      <ion-icon slot="icon-only" name="chevron-forward-outline"></ion-icon>
-    </ion-button>
-  </div>
+  <app-week-nav
+    [isoWeek]="week.isoWeek"
+    [year]="week.year"
+    [isComplete]="isWeekComplete"
+    (previousWeek)="goToPreviousWeek()"
+    (nextWeek)="goToNextWeek()"
+    (currentWeek)="goToCurrentWeek()"
+  ></app-week-nav>
 
   <div class="day-list"
     [class.slide-from-right]="slideDir === 'right'"
@@ -56,9 +45,17 @@
           (click)="onItemClick(item, i)"
         >
           <span class="item-name">{{ item.name || '—' }}</span>
-          <span class="item-meal-name" *ngIf="item.mealName">{{ item.mealName }}</span>
+          <span class="item-meal-name"
+                *ngIf="item.mealName"
+                #mealNameEl
+                [attr.data-item-id]="item.id">{{ item.mealName }}</span>
           <div class="item-tags" *ngIf="item.resolvedTags?.length">
-            <app-tag-pill *ngFor="let t of item.resolvedTags" [name]="t.name" [color]="t.color"></app-tag-pill>
+            <ng-container *ngFor="let t of item.resolvedTags; let ti = index">
+              <app-tag-pill
+                *ngIf="ti < (tagVisibility.get(item.id) ?? item.resolvedTags.length)"
+                [name]="t.name" [color]="t.color">
+              </app-tag-pill>
+            </ng-container>
           </div>
         </div>
       </div>
@@ -79,9 +76,11 @@
         [tags]="tags"
         [showTags]="true"
         [allowReorder]="true"
+        [allowEdit]="true"
         addLabel="Add item"
         placeholder="Item name…"
         (itemAdd)="onItemAdd($event)"
+        (itemUpdate)="onItemUpdate($event)"
         (itemRemove)="removeItem($event)"
         (itemsReorder)="handleReorder($event)"
       ></app-item-editor>

@@ -110,6 +110,20 @@ export class DbService {
     localStorage.setItem(`week-meals-${year}-${week}-${dayIndex}`, JSON.stringify(entries));
   }
 
+  async deleteSubMenuHistory(itemId: string, dayIndex: number): Promise<void> {
+    const suffix = `-${dayIndex}`;
+    const keysToUpdate: string[] = [];
+    for (let i = 0; i < localStorage.length; i++) {
+      const key = localStorage.key(i);
+      if (key?.startsWith('week-meals-') && key.endsWith(suffix)) keysToUpdate.push(key);
+    }
+    for (const key of keysToUpdate) {
+      const entries: WeekMealEntry[] = JSON.parse(localStorage.getItem(key) ?? '[]');
+      const filtered = entries.filter(e => e.itemId !== itemId);
+      if (filtered.length !== entries.length) localStorage.setItem(key, JSON.stringify(filtered));
+    }
+  }
+
   // ---- Backup / Restore ----
 
   exportAll(): string {

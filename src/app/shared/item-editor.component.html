@@ -2,13 +2,24 @@
 
   <ng-container *ngIf="allowReorder">
     <ion-reorder-group [disabled]="false" (ionItemReorder)="onReorder($event)">
-      <div class="editor-item" *ngFor="let item of items">
+      <div class="editor-item"
+           *ngFor="let item of items"
+           [class.editor-item--editing]="editingItemId === item.id">
         <ion-reorder class="reorder-handle"></ion-reorder>
         <span class="editor-item-name">{{ item.name }}</span>
         <ng-container *ngIf="showTags && item.resolvedTags?.length">
           <app-tag-pill *ngFor="let t of item.resolvedTags" [name]="t.name" [color]="t.color"></app-tag-pill>
         </ng-container>
-        <button class="editor-item-delete" (click)="onRemove(item.id)" aria-label="Delete">
+        <button *ngIf="allowEdit"
+                class="editor-item-action"
+                (click)="onEditClick(item); $event.stopPropagation()"
+                aria-label="Edit">
+          <ion-icon name="create-outline"></ion-icon>
+        </button>
+        <button *ngIf="!allowEdit"
+                class="editor-item-action"
+                (click)="onRemove(item.id)"
+                aria-label="Delete">
           <ion-icon name="trash-outline"></ion-icon>
         </button>
       </div>
@@ -18,7 +29,7 @@
   <ng-container *ngIf="!allowReorder">
     <div class="editor-item" *ngFor="let item of items">
       <span class="editor-item-name">{{ item.name }}</span>
-      <button class="editor-item-delete" (click)="onRemove(item.id)" aria-label="Delete">
+      <button class="editor-item-action" (click)="onRemove(item.id)" aria-label="Delete">
         <ion-icon name="trash-outline"></ion-icon>
       </button>
     </div>
@@ -26,7 +37,9 @@
 
 </div>
 
-<p class="section-label" *ngIf="addLabel">{{ addLabel }}</p>
+<p class="section-label" *ngIf="addLabel || editingItemId">
+  {{ editingItemId ? 'Edit item' : addLabel }}
+</p>
 
 <input
   class="text-input"
@@ -37,7 +50,7 @@
   (keydown)="onKeydown($event)"
 />
 
-<p class="section-label">Tag (optional)</p>
+<p class="section-label">Tags (optional)</p>
 <p class="no-tags-hint" *ngIf="showTags && tags.length === 0">No tags available</p>
 
 <div class="tag-selector" *ngIf="showTags && tags.length > 0">
@@ -55,4 +68,14 @@
   </button>
 </div>
 
-<ion-button expand="block" (click)="onAdd()">Add</ion-button>
+<ng-container *ngIf="!editingItemId">
+  <ion-button expand="block" (click)="onAdd()">Add</ion-button>
+</ng-container>
+
+<div *ngIf="editingItemId" class="edit-actions">
+  <ion-button expand="block" (click)="onUpdate()">Update</ion-button>
+  <ion-button expand="block" fill="outline" class="btn-delete" (click)="onDeleteEditing()">
+    <ion-icon slot="start" name="trash-outline"></ion-icon>
+    Delete
+  </ion-button>
+</div>
