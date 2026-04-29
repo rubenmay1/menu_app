@@ -1,3 +1,47 @@
+// Tutorial spotlight overlay
+.tutorial-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 9000;
+  cursor: pointer;
+}
+
+.tutorial-spotlight {
+  position: fixed;
+  border-radius: 50%;
+  // Huge box-shadow dims everything outside the circle; the circle itself stays transparent
+  box-shadow: 0 0 0 200vmax rgba(0, 0, 0, 0.82);
+  pointer-events: none;
+  transition: left 0.32s ease, top 0.32s ease, width 0.32s ease, height 0.32s ease;
+}
+
+.tutorial-hint {
+  position: fixed;
+  left: 32px;
+  right: 32px;
+  text-align: center;
+  pointer-events: none;
+  transition: top 0.32s ease, bottom 0.32s ease;
+}
+
+.tutorial-hint-text {
+  font-family: 'Inter', sans-serif;
+  font-size: 1.1rem;
+  font-weight: 600;
+  color: #fff;
+  line-height: 1.5;
+  margin: 0 0 12px;
+  text-shadow: 0 1px 6px rgba(0, 0, 0, 0.5);
+}
+
+.tutorial-hint-continue {
+  font-family: 'Inter', sans-serif;
+  font-size: 0.78rem;
+  color: rgba(255, 255, 255, 0.45);
+  letter-spacing: 0.04em;
+  margin: 0;
+}
+
 .splash {
   position: fixed;
   inset: 0;

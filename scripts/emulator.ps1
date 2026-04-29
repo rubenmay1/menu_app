@@ -1,3 +1,5 @@
+Set-Location "$PSScriptRoot\.."
+
 Write-Host "Building and syncing..." -ForegroundColor Cyan
 ionic build --prod
 

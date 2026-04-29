@@ -1,6 +1,22 @@
 <ion-app>
   <ion-router-outlet></ion-router-outlet>
 
+  <!-- Tutorial overlay -->
+  <div class="tutorial-overlay" *ngIf="tutorialVisible" (click)="advanceTutorial()">
+    <div class="tutorial-spotlight"
+      [style.left.px]="spotlight.cx - spotlight.r"
+      [style.top.px]="spotlight.cy - spotlight.r"
+      [style.width.px]="spotlight.r * 2"
+      [style.height.px]="spotlight.r * 2">
+    </div>
+    <div class="tutorial-hint"
+      [style.top]="tutorialTextTop"
+      [style.bottom]="tutorialTextBottom">
+      <p class="tutorial-hint-text">{{ tutorialText }}</p>
+      <p class="tutorial-hint-continue">Tap anywhere to continue</p>
+    </div>
+  </div>
+
   <div class="splash" [class.splash--hiding]="splashHiding" *ngIf="splashVisible">
     <span class="splash-title">Menu</span>
   </div>

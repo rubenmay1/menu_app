@@ -1,3 +1,5 @@
+Set-Location "$PSScriptRoot\.."
+
 Write-Host "Building and syncing for release..." -ForegroundColor Cyan
 ionic build --prod
 
@@ -7,6 +9,11 @@ if ($LASTEXITCODE -ne 0) {
 }
 
 npx cap sync android
+
+if ($LASTEXITCODE -ne 0) {
+    Write-Host "Sync failed." -ForegroundColor Red
+    exit 1
+}
 
 Write-Host "Opening Android Studio for APK packaging..." -ForegroundColor Cyan
 npx cap open android

@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">Menu - Weekly Meal Planner</string>
+    <string name="title_activity_main">Menu - Weekly Meal Planner</string>
+    <string name="package_name">com.rubenmay.menuapp</string>
+    <string name="custom_url_scheme">com.rubenmay.menuapp</string>
+</resources>

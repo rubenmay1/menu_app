@@ -5,6 +5,20 @@ import { AlertController } from '@ionic/angular';
 import { DbService } from './shared/db.service';
 import { DropboxService } from './shared/dropbox.service';
 
+interface TutorialStep {
+  readonly selector: string;
+  readonly text: string;
+  readonly radius: number;
+}
+
+const TUTORIAL_STEPS: TutorialStep[] = [
+  { selector: 'ion-tab-button[tab="plan"]',     text: 'Plan and select your meals for each day',      radius: 40 },
+  { selector: '.day-name',                       text: 'Long press to customise your meal types',      radius: 44 },
+  { selector: 'ion-tab-button[tab="shopping"]', text: 'View and check off ingredients for your plan', radius: 40 },
+  { selector: 'ion-tab-button[tab="meals"]',    text: 'Create and edit different custom meals',        radius: 40 },
+  { selector: 'ion-tab-button[tab="tags"]',     text: 'Create and edit tags used to filter meals',    radius: 40 },
+];
+
 @Component({
   selector: 'app-root',
   templateUrl: 'app.component.html',
@@ -16,6 +30,15 @@ export class AppComponent implements OnInit {
   splashVisible = true;
   splashHiding = false;
   connectPromptVisible = false;
+
+  tutorialVisible = false;
+  tutorialText = '';
+  spotlight = { cx: 0, cy: 0, r: 0 };
+  tutorialTextTop: string | null = null;
+  tutorialTextBottom: string | null = null;
+
+  private tutorialStep = 0;
+  private tutorialResolve: (() => void) | null = null;
 
   constructor(
     private readonly db: DbService,
@@ -39,6 +62,11 @@ export class AppComponent implements OnInit {
       setTimeout(async () => {
         this.splashVisible = false;
         await new Promise<void>(r => setTimeout(r, 200));
+
+        if (!localStorage.getItem('tutorial-completed')) {
+          await this.runTutorial();
+        }
+
         if (this.dropbox.isConnected()) {
           await this.showSyncPrompt();
         } else if (this.dropbox.shouldPromptConnect()) {
@@ -57,6 +85,59 @@ export class AppComponent implements OnInit {
       }
     });
   }
+
+  // ---- Tutorial ----
+
+  advanceTutorial(): void {
+    const next = this.tutorialStep + 1;
+    if (next >= TUTORIAL_STEPS.length) {
+      this.endTutorial();
+    } else {
+      this.tutorialStep = next;
+      this.applyTutorialStep(next);
+    }
+  }
+
+  private runTutorial(): Promise<void> {
+    return new Promise(resolve => {
+      this.tutorialResolve = resolve;
+      this.tutorialStep = 0;
+      this.applyTutorialStep(0);
+      this.tutorialVisible = true;
+    });
+  }
+
+  private applyTutorialStep(index: number): void {
+    const step = TUTORIAL_STEPS[index];
+    const el = document.querySelector(step.selector);
+    if (!el) {
+      this.advanceTutorial();
+      return;
+    }
+    const rect = el.getBoundingClientRect();
+    const cx = Math.round(rect.left + rect.width / 2);
+    const cy = Math.round(rect.top + rect.height / 2);
+    this.spotlight = { cx, cy, r: step.radius };
+    this.tutorialText = step.text;
+
+    const gap = 28;
+    if (cy < window.innerHeight * 0.55) {
+      this.tutorialTextTop = `${cy + step.radius + gap}px`;
+      this.tutorialTextBottom = null;
+    } else {
+      this.tutorialTextTop = null;
+      this.tutorialTextBottom = `${window.innerHeight - cy + step.radius + gap}px`;
+    }
+  }
+
+  private endTutorial(): void {
+    this.tutorialVisible = false;
+    localStorage.setItem('tutorial-completed', '1');
+    this.tutorialResolve?.();
+    this.tutorialResolve = null;
+  }
+
+  // ---- Dropbox ----
 
   onConnectNow(): void {
     this.connectPromptVisible = false;

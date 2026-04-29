@@ -1,3 +1,5 @@
+Set-Location "$PSScriptRoot\.."
+
 Write-Host "Building Angular/Ionic app..." -ForegroundColor Cyan
 ionic build --prod
 
