@@ -1,28 +1,15 @@
 import { Injectable } from '@angular/core';
 import { Meal } from './meal.model';
+import { DbService } from '../shared/db.service';
 
 @Injectable({ providedIn: 'root' })
 export class MealService {
+  constructor(private readonly db: DbService) {}
 
-  private readonly KEY = 'meals';
-
-  getMeals(): Meal[] {
-    const raw = localStorage.getItem(this.KEY);
-    return raw ? JSON.parse(raw) : [];
-  }
-
-  saveMeal(meal: Meal): void {
-    const meals = this.getMeals();
-    const idx = meals.findIndex(m => m.id === meal.id);
-    if (idx >= 0) meals[idx] = meal;
-    else meals.push(meal);
-    localStorage.setItem(this.KEY, JSON.stringify(meals));
-  }
-
-  deleteMeal(id: string): void {
-    const meals = this.getMeals().filter(m => m.id !== id);
-    localStorage.setItem(this.KEY, JSON.stringify(meals));
-  }
+  getMeals(): Promise<Meal[]> { return this.db.getMeals(); }
+  saveMeal(meal: Meal): Promise<void> { return this.db.saveMeal(meal); }
+  deleteMeal(id: string): Promise<void> { return this.db.deleteMeal(id); }
+  getMealUsageCounts(): Promise<Map<string, number>> { return this.db.getMealUsageCounts(); }
 
   createId(): string {
     return `meal-${Date.now()}-${Math.random().toString(36).slice(2)}`;

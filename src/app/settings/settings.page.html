@@ -4,4 +4,35 @@
   </ion-toolbar>
 </ion-header>
 
-<ion-content></ion-content>
+<ion-content>
+  <div class="section">
+    <div class="section-label">Dropbox</div>
+
+    <div class="card" *ngIf="!dropbox.isConnected()">
+      <p class="hint">Connect Dropbox to back up and restore your data.</p>
+      <ion-button expand="block" (click)="connectDropbox()">
+        <ion-icon slot="start" name="logo-dropbox"></ion-icon>
+        Connect to Dropbox
+      </ion-button>
+    </div>
+
+    <div class="card" *ngIf="dropbox.isConnected()">
+      <div class="last-sync">
+        <ion-icon name="time-outline"></ion-icon>
+        <span>{{ lastSyncLabel }}</span>
+      </div>
+      <ion-button expand="block" (click)="syncNow()" [disabled]="isSyncing || isRestoring">
+        <ion-icon slot="start" name="cloud-upload-outline"></ion-icon>
+        {{ isSyncing ? 'Backing up…' : 'Back up now' }}
+      </ion-button>
+      <ion-button expand="block" fill="outline" (click)="restoreNow()" [disabled]="isSyncing || isRestoring">
+        <ion-icon slot="start" name="cloud-download-outline"></ion-icon>
+        {{ isRestoring ? 'Restoring…' : 'Restore from Dropbox' }}
+      </ion-button>
+      <ion-button expand="block" class="btn-delete" fill="outline" (click)="disconnect()">
+        <ion-icon slot="start" name="trash-outline"></ion-icon>
+        Disconnect Dropbox
+      </ion-button>
+    </div>
+  </div>
+</ion-content>

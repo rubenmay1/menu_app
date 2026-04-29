@@ -1,3 +1,28 @@
 <ion-app>
   <ion-router-outlet></ion-router-outlet>
+
+  <div class="splash" [class.splash--hiding]="splashHiding" *ngIf="splashVisible">
+    <span class="splash-title">Menu</span>
+  </div>
+
+  <div class="dropbox-backdrop" *ngIf="connectPromptVisible" (click)="onConnectLater()">
+    <div class="dropbox-panel" (click)="$event.stopPropagation()">
+      <div class="dropbox-logo-wrap">
+        <ion-icon name="logo-dropbox" class="dropbox-logo-icon"></ion-icon>
+      </div>
+      <p class="dropbox-title">Back up to Dropbox?</p>
+      <p class="dropbox-subtitle">Connect Dropbox to keep your meal plan safe across devices.</p>
+      <div class="dropbox-actions">
+        <ion-button expand="block" (click)="onConnectNow()">
+          Connect to Dropbox
+        </ion-button>
+        <ion-button expand="block" fill="outline" class="btn-later" (click)="onConnectLater()">
+          Later
+        </ion-button>
+        <ion-button expand="block" fill="outline" class="btn-dismiss" (click)="onConnectDismiss()">
+          Don't Remind Me Again
+        </ion-button>
+      </div>
+    </div>
+  </div>
 </ion-app>

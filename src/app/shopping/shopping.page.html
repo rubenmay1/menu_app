@@ -4,4 +4,41 @@
   </ion-toolbar>
 </ion-header>
 
-<ion-content></ion-content>
+<ion-content #contentRef>
+
+  <ng-container *ngIf="week">
+
+    <div class="week-header">
+      <ion-button fill="clear" (click)="goToPreviousWeek()">
+        <ion-icon slot="icon-only" name="chevron-back-outline"></ion-icon>
+      </ion-button>
+      <span class="week-label">Week {{ week.isoWeek }}</span>
+      <ion-button fill="clear" (click)="goToNextWeek()">
+        <ion-icon slot="icon-only" name="chevron-forward-outline"></ion-icon>
+      </ion-button>
+    </div>
+
+    <div class="list-container">
+
+      <p class="empty-state" *ngIf="activeItems.length === 0 && doneItems.length === 0">
+        No ingredients this week yet.
+      </p>
+
+      <div class="ingredient-row" *ngFor="let item of activeItems" (click)="toggleItem(item)">
+        <span class="ingredient-name">{{ item.ingredientName }}</span>
+        <span class="meal-label">{{ item.mealName }}</span>
+      </div>
+
+      <div class="complete-section" *ngIf="doneItems.length > 0">
+        <p class="section-header">Complete</p>
+        <div class="ingredient-row ingredient-row--done" *ngFor="let item of doneItems" (click)="toggleItem(item)">
+          <span class="ingredient-name">{{ item.ingredientName }}</span>
+          <span class="meal-label">{{ item.mealName }}</span>
+        </div>
+      </div>
+
+    </div>
+
+  </ng-container>
+
+</ion-content>

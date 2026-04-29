@@ -16,20 +16,29 @@
       <div
         class="meal-row"
         *ngFor="let meal of filteredMeals"
-        (click)="openEditor(meal)"
+        (pointerdown)="onMealPointerDown(meal)"
+        (pointerup)="onMealPointerUp(meal)"
+        (pointerleave)="onMealPointerLeave(meal)"
+        (contextmenu)="$event.preventDefault()"
+        (click)="onMealClick(meal)"
       >
         <span class="meal-name">{{ meal.name }}</span>
-        <ng-container *ngIf="getTag(meal.tagId) as tag">
-          <app-tag-pill [name]="tag.name" [color]="tag.color" size="sm"></app-tag-pill>
+        <ng-container *ngFor="let tagId of meal.tagIds">
+          <ng-container *ngIf="getTag(tagId) as tag">
+            <app-tag-pill [name]="tag.name" [color]="tag.color" size="sm"></app-tag-pill>
+          </ng-container>
         </ng-container>
-        <span class="ingredient-count" *ngIf="meal.ingredients.length > 0">
-          {{ meal.ingredients.length }}
-        </span>
+        <ion-icon name="link-outline" class="recipe-icon" *ngIf="meal.recipeUrl"></ion-icon>
+        <ion-icon name="list-outline" class="ingredient-icon" *ngIf="meal.ingredients.length > 0"></ion-icon>
+        <ng-container *ngIf="mealUsageCounts.get(meal.name) as count">
+          <ion-icon name="flame-outline" class="flame-icon"></ion-icon>
+          <span class="flame-count">{{ count }}</span>
+        </ng-container>
       </div>
   </div>
 
   <div class="empty-state" *ngIf="meals.length === 0 && !searchQuery">
-    <p>No meals yet. Tap + to create one.</p>
+    <p>No meals yet. Long-press to edit, tap to view recipe.</p>
   </div>
 
   <div class="empty-state" *ngIf="filteredMeals.length === 0 && searchQuery">
@@ -37,7 +46,7 @@
   </div>
 
   <ion-fab vertical="bottom" horizontal="center" slot="fixed" style="bottom: 48px"
-    *ngIf="!panelVisible && !ingredientsPopupVisible">
+    *ngIf="!panelVisible && !ingredientsPopupVisible && !tooltipVisible">
     <ion-fab-button (click)="openCreator()">
       <ion-icon name="add"></ion-icon>
     </ion-fab-button>
@@ -47,8 +56,9 @@
   <div class="backdrop" *ngIf="panelVisible" (click)="closePanel()">
     <div class="bottom-panel" (click)="$event.stopPropagation()">
 
-      <p class="panel-title">{{ editingMealId ? 'Edit meal' : 'New meal' }}</p>
+      <p class="panel-title">{{ editingMealId ? 'Edit Meal' : 'Create New Meal' }}</p>
 
+      <p class="panel-section-label">Name</p>
       <input
         class="text-input"
         [(ngModel)]="editingName"
@@ -57,23 +67,31 @@
         maxlength="60"
       />
 
-      <p class="panel-section-label">Tag</p>
+      <p class="panel-section-label">Tags (optional)</p>
       <div class="tag-selector">
         <button
           class="tag-sel-pill"
           *ngFor="let tag of tags"
-          [class.tag-sel-pill--selected]="editingTagId === tag.id"
-          [style.background-color]="editingTagId === tag.id ? tag.color : ''"
+          [class.tag-sel-pill--selected]="editingTagIds.includes(tag.id)"
+          [style.background-color]="editingTagIds.includes(tag.id) ? tag.color : ''"
           [style.border-color]="tag.color"
-          [style.color]="editingTagId === tag.id ? '#fff' : tag.color"
-          (click)="editingTagId = editingTagId === tag.id ? null : tag.id"
+          [style.color]="editingTagIds.includes(tag.id) ? '#fff' : tag.color"
+          (click)="toggleTag(tag.id)"
         >
-          <ion-icon *ngIf="editingTagId === tag.id" name="checkmark" class="pill-check"></ion-icon>
+          <ion-icon *ngIf="editingTagIds.includes(tag.id)" name="checkmark" class="pill-check"></ion-icon>
           {{ tag.name }}
         </button>
       </div>
 
-      <p class="panel-section-label">Ingredients</p>
+      <p class="panel-section-label">Recipe URL (optional)</p>
+      <input
+        class="text-input"
+        [(ngModel)]="editingRecipeUrl"
+        placeholder="https://…"
+        type="url"
+      />
+
+      <p class="panel-section-label">Ingredients (optional)</p>
       <button class="ingredients-btn" (click)="openIngredientsPopup()">
         <ion-icon name="list-outline"></ion-icon>
         <span>{{ editingIngredients.length
@@ -121,6 +139,17 @@
         (itemRemove)="removeIngredient($event)"
       ></app-item-editor>
 
+    </div>
+  </div>
+
+  <!-- Recipe tooltip -->
+  <div class="recipe-backdrop" *ngIf="tooltipVisible" (click)="closeTooltip()">
+    <div class="recipe-tooltip" (click)="$event.stopPropagation()">
+      <p class="recipe-tooltip-name">{{ tooltipMeal?.name }}</p>
+      <ion-button expand="block" (click)="openRecipe()">
+        <ion-icon slot="start" name="open-outline"></ion-icon>
+        Go to Recipe
+      </ion-button>
     </div>
   </div>
 

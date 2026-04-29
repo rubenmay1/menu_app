@@ -1,32 +1,15 @@
 import { Injectable } from '@angular/core';
 import { Tag } from './tag.model';
+import { DbService } from '../shared/db.service';
 
 @Injectable({ providedIn: 'root' })
 export class TagService {
-  private readonly STORAGE_KEY = 'tags';
+  constructor(private readonly db: DbService) {}
 
-  getTags(): Tag[] {
-    try {
-      return JSON.parse(localStorage.getItem(this.STORAGE_KEY) ?? '[]');
-    } catch {
-      return [];
-    }
-  }
-
-  getTagById(id: string): Tag | null {
-    return this.getTags().find(t => t.id === id) ?? null;
-  }
-
-  saveTag(tag: Tag): void {
-    const tags = this.getTags().filter(t => t.id !== tag.id);
-    tags.push(tag);
-    localStorage.setItem(this.STORAGE_KEY, JSON.stringify(tags));
-  }
-
-  deleteTag(id: string): void {
-    const tags = this.getTags().filter(t => t.id !== id);
-    localStorage.setItem(this.STORAGE_KEY, JSON.stringify(tags));
-  }
+  getTags(): Promise<Tag[]> { return this.db.getTags(); }
+  getTagById(id: string): Promise<Tag | null> { return this.db.getTagById(id); }
+  saveTag(tag: Tag): Promise<void> { return this.db.saveTag(tag); }
+  deleteTag(id: string): Promise<void> { return this.db.deleteTag(id); }
 
   createId(): string {
     return `tag-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`;

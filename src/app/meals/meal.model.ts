@@ -6,6 +6,7 @@ export interface Ingredient {
 export interface Meal {
   id: string;
   name: string;
-  tagId: string | null;
+  tagIds: string[];
   ingredients: Ingredient[];
+  recipeUrl?: string;
 }

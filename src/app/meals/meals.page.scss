@@ -29,13 +29,24 @@ ion-searchbar {
   flex: 1;
 }
 
-.ingredient-count {
-  font-family: 'Inter', sans-serif;
-  font-size: 0.75rem;
+.ingredient-icon {
+  font-size: 1rem;
   color: var(--ion-color-medium, #92949c);
-  background: rgba(255, 255, 255, 0.12);
-  border-radius: 999px;
-  padding: 2px 8px;
+  flex-shrink: 0;
+}
+
+.flame-icon {
+  font-size: 0.95rem;
+  color: var(--ion-color-warning, #ffc409);
+  flex-shrink: 0;
+}
+
+.flame-count {
+  font-family: 'Inter', sans-serif;
+  font-size: 0.78rem;
+  font-weight: 500;
+  color: var(--ion-color-warning, #ffc409);
+  flex-shrink: 0;
 }
 
 .group-divider {
@@ -88,7 +99,11 @@ ion-searchbar {
   color: var(--ion-color-medium, #92949c);
   text-transform: uppercase;
   letter-spacing: 0.05em;
-  margin: 0 0 8px;
+  margin: 20px 0 8px;
+}
+
+.panel-title + .panel-section-label {
+  margin-top: 0;
 }
 
 .text-input {
@@ -110,6 +125,7 @@ ion-searchbar {
 .tag-selector {
   display: flex;
   flex-wrap: wrap;
+  justify-content: center;
   gap: 6px;
   margin-bottom: 16px;
 }
@@ -159,6 +175,39 @@ ion-searchbar {
   display: flex;
   flex-direction: column;
   gap: 10px;
+}
+
+.recipe-icon {
+  font-size: 1rem;
+  color: var(--ion-color-primary, #3880ff);
+  flex-shrink: 0;
+}
+
+.recipe-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.6);
+  z-index: 2000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+}
+
+.recipe-tooltip {
+  background: var(--surface-2);
+  border-radius: 12px;
+  padding: 24px 20px 20px;
+  width: 100%;
+  max-width: 320px;
+}
+
+.recipe-tooltip-name {
+  font-family: 'Inter', sans-serif;
+  font-weight: 600;
+  font-size: 1rem;
+  text-align: center;
+  margin: 0 0 16px;
 }
 
 .ing-backdrop {

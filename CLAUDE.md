@@ -1,4 +1,4 @@
-# Meal Planner App — Claude Code Project Brief
+# Menu - Weekly Meal Planner App — Claude Code Project Brief
 
 ## Project Goal
 Angular + TypeScript + Ionic mobile app for Android. No server required. SQLite stored on-device.
@@ -34,7 +34,7 @@ Dropbox used for DB backup and restore only. Coded in VS Code, tested in browser
 - Register a free app at the Dropbox developer portal to obtain an **App Key**
 - Use **PKCE OAuth flow** — App Secret is not required in client code, only the App Key
 - The App Key is safe to ship in client code — it identifies the app, not the user
-- Register `mealplanner://dropbox-callback` as an allowed redirect URI in the Dropbox developer portal
+- Register `menu-app://dropbox-callback` as an allowed redirect URI in the Dropbox developer portal
 - On first launch, check local storage for an existing access token:
   - **Token absent** — show Connect to Dropbox screen
   - **Token present** — skip straight to main app

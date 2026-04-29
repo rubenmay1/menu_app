@@ -16,12 +16,10 @@ export class TagsPage {
   searchQuery: string = '';
   readonly presetColors: string[] = PRESET_COLORS;
 
-  // Creator panel
   creatorVisible: boolean = false;
   newTagName: string = '';
   newTagColor: string = '#42a5f5';
 
-  // Editor panel (long-press)
   editorVisible: boolean = false;
   editingTag: Tag | null = null;
   editingName: string = '';
@@ -29,8 +27,8 @@ export class TagsPage {
 
   constructor(private readonly tagService: TagService) {}
 
-  ionViewWillEnter(): void {
-    this.tags = this.tagService.getTags();
+  async ionViewWillEnter(): Promise<void> {
+    this.tags = await this.tagService.getTags();
     this.applyFilter();
   }
 
@@ -45,7 +43,6 @@ export class TagsPage {
     this.applyFilter();
   }
 
-  // Creator
   openCreator(): void {
     this.newTagName = '';
     this.newTagColor = '#90caf9';
@@ -56,11 +53,11 @@ export class TagsPage {
     this.creatorVisible = false;
   }
 
-  saveNewTag(): void {
+  async saveNewTag(): Promise<void> {
     const name = this.newTagName.trim();
     if (!name) return;
-    this.tagService.saveTag({ id: this.tagService.createId(), name, color: this.newTagColor });
-    this.tags = this.tagService.getTags();
+    await this.tagService.saveTag({ id: this.tagService.createId(), name, color: this.newTagColor });
+    this.tags = await this.tagService.getTags();
     this.applyFilter();
     this.creatorVisible = false;
   }
@@ -77,19 +74,19 @@ export class TagsPage {
     this.editingTag = null;
   }
 
-  saveEdit(): void {
+  async saveEdit(): Promise<void> {
     const name = this.editingName.trim();
     if (!name || !this.editingTag) return;
-    this.tagService.saveTag({ id: this.editingTag.id, name, color: this.editingColor });
-    this.tags = this.tagService.getTags();
+    await this.tagService.saveTag({ id: this.editingTag.id, name, color: this.editingColor });
+    this.tags = await this.tagService.getTags();
     this.applyFilter();
     this.closeEditor();
   }
 
-  deleteTag(): void {
+  async deleteTag(): Promise<void> {
     if (!this.editingTag) return;
-    this.tagService.deleteTag(this.editingTag.id);
-    this.tags = this.tagService.getTags();
+    await this.tagService.deleteTag(this.editingTag.id);
+    this.tags = await this.tagService.getTags();
     this.applyFilter();
     this.closeEditor();
   }

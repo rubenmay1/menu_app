@@ -9,7 +9,10 @@
       "Bash(ionic start *)",
       "Bash(node *)",
       "Bash(npx ng *)",
-      "Bash(npx tsc *)"
+      "Bash(npx tsc *)",
+      "Bash(dir \"E:\\\\Documents\\\\Coding\\\\menu_app\\\\node_modules\\\\sql.js\\\\dist\")",
+      "Bash(dir *)",
+      "Bash(npm uninstall *)"
     ]
   }
 }

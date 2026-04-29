@@ -6,20 +6,28 @@
 
 <ion-content #contentRef>
 
+  <ng-container *ngIf="week">
+
   <div class="week-header">
     <ion-button fill="clear" (click)="goToPreviousWeek()">
       <ion-icon slot="icon-only" name="chevron-back-outline"></ion-icon>
     </ion-button>
-    <span class="week-label">
-      Week {{ week.isoWeek }}
-      <ion-icon *ngIf="isWeekComplete" name="checkmark-circle-outline" class="week-complete-tick"></ion-icon>
-    </span>
+    <div class="week-label" (click)="goToCurrentWeek()">
+      <span class="week-number">
+        Week {{ week.isoWeek }}
+        <ion-icon *ngIf="isWeekComplete" name="checkmark-done-outline" class="week-complete-tick"></ion-icon>
+      </span>
+      <span class="week-year">{{ week.year }}</span>
+    </div>
     <ion-button fill="clear" (click)="goToNextWeek()">
       <ion-icon slot="icon-only" name="chevron-forward-outline"></ion-icon>
     </ion-button>
   </div>
 
-  <div class="day-list">
+  <div class="day-list"
+    [class.slide-from-right]="slideDir === 'right'"
+    [class.slide-from-left]="slideDir === 'left'"
+  >
     <div class="day-card" *ngFor="let day of week.days; let i = index">
 
       <div class="day-header"
@@ -28,26 +36,37 @@
         (pointerleave)="onDayPointerLeave(i)"
         (contextmenu)="$event.preventDefault()"
       >
-        <span class="day-name">{{ day.dayName }}</span>
+        <!-- Group the Name and Tick together so they stay on the left -->
+        <div class="day-header-left">
+          <span class="day-name">{{ day.dayName }}</span>
+          <ion-icon name="checkmark-done-outline" class="day-complete-tick" [style.visibility]="isDayComplete(day) ? 'visible' : 'hidden'"></ion-icon>
+        </div>
+
         <div class="day-header-right">
           <span class="day-date">{{ day.displayDate }}</span>
-          <ion-icon *ngIf="isDayComplete(day)" name="checkmark-circle-outline" class="day-complete-tick"></ion-icon>
         </div>
       </div>
 
       <div class="item-list" [class.item-list--complete]="isDayComplete(day)" *ngIf="day.items.length > 0">
-        <div class="menu-item" *ngFor="let item of day.items" (click)="openItemPopup(item, i)">
-          <ion-icon *ngIf="item.starred" name="star" class="item-star"></ion-icon>
+        <div class="menu-item" *ngFor="let item of day.items"
+          (pointerdown)="onItemPointerDown(i)"
+          (pointerup)="onItemPointerUp()"
+          (pointerleave)="onItemPointerLeave()"
+          (contextmenu)="$event.preventDefault()"
+          (click)="onItemClick(item, i)"
+        >
           <span class="item-name">{{ item.name || '—' }}</span>
-          <span class="item-meal-name" *ngIf="item.mealName && !item.starred">{{ item.mealName }}</span>
-          <ng-container *ngIf="item.resolvedTags?.length">
+          <span class="item-meal-name" *ngIf="item.mealName">{{ item.mealName }}</span>
+          <div class="item-tags" *ngIf="item.resolvedTags?.length">
             <app-tag-pill *ngFor="let t of item.resolvedTags" [name]="t.name" [color]="t.color"></app-tag-pill>
-          </ng-container>
+          </div>
         </div>
       </div>
 
     </div>
   </div>
+
+  </ng-container>
 
   <!-- Day editor (long-press) -->
   <div class="backdrop" *ngIf="dayEditorVisible" (click)="closeDayEditor()">
@@ -79,35 +98,53 @@
       </button>
 
       <p class="picker-current-name">
-        <ion-icon *ngIf="itemPopupItem?.starred" name="star" class="picker-star-indicator"></ion-icon>
         {{ itemPopupItem?.name || '—' }}
-        <span *ngIf="itemPopupItem?.mealName && !itemPopupItem?.starred" class="picker-meal-label">{{ itemPopupItem?.mealName }}</span>
       </p>
 
       <!-- Default mode -->
       <ng-container *ngIf="pickerMode === 'default'">
 
-        <div class="picker-actions">
-          <button class="picker-action-btn" (click)="setBlank()">Reset</button>
-          <button class="picker-action-btn" (click)="setDashed()">--</button>
-          <button class="picker-action-btn" (click)="openCustomMode()">Custom</button>
+        <div class="picker-meals-section">
+          <ng-container *ngIf="pickerMeals.length > 0">
+            <div class="picker-meals-header">
+              <p class="picker-section-label">From Meals</p>
+              <ng-container *ngIf="tags?.length">
+                <app-tag-pill *ngFor="let t of pickerTags" [name]="t.name" [color]="t.color"></app-tag-pill>
+              </ng-container>
+            </div>
+
+            <div class="picker-meal-row" *ngFor="let meal of pickerMeals" (click)="selectMeal(meal)">
+              <span class="picker-meal-name">{{ meal.name }}</span>
+              <ng-container *ngIf="getMatchingTags(meal) as matchTags">
+                <div class="picker-meal-match-tags" *ngIf="matchTags.length > 0">
+                  <app-tag-pill *ngFor="let t of matchTags" [name]="t.name" [color]="t.color" size="sm"></app-tag-pill>
+                </div>
+              </ng-container>
+              <ng-container *ngIf="mealUsageCounts.get(meal.name) as count">
+                <ion-icon name="flame-outline" class="picker-flame-icon"></ion-icon>
+                <span class="picker-flame-count">{{ count }}</span>
+              </ng-container>
+            </div>
+          </ng-container>
+
+          <p class="picker-no-meals" *ngIf="pickerMeals.length === 0">
+            {{ itemPopupItem?.tagIds?.length ? 'No meals with this tag yet.' : 'No meals yet.' }}
+          </p>
         </div>
 
-        <div *ngIf="pickerMeals.length > 0" class="picker-meals-section">
+        <div class="picker-meals-section">
           <div class="picker-meals-header">
-            <p class="picker-section-label">From Meals</p>
-            <ng-container *ngIf="tags?.length">
-              <app-tag-pill *ngFor="let t of pickerTags" [name]="t.name" [color]="t.color"></app-tag-pill>
-            </ng-container>
+            <p class="picker-section-label">Other</p>
           </div>
-          <div class="picker-meal-row" *ngFor="let meal of pickerMeals" (click)="selectMeal(meal)">
-            {{ meal.name }}
+          <div class="picker-meal-row" (click)="setNone()">
+            <ion-icon name="close-outline" class="other-row-icon"></ion-icon>
+            None
+          </div>
+          <div class="picker-meal-row" (click)="openCustomMode()">
+            <ion-icon name="create-outline" class="other-row-icon"></ion-icon>
+            Custom
           </div>
         </div>
-
-        <p class="picker-no-meals" *ngIf="pickerMeals.length === 0">
-          {{ itemPopupItem?.tagIds?.length ? 'No meals with this tag yet.' : 'No meals yet.' }}
-        </p>
 
       </ng-container>
 

@@ -1,0 +1,83 @@
+.week-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 8px 4px;
+  background: var(--surface-0);
+
+  .week-label {
+    font-family: 'Inter', sans-serif;
+    font-size: 1.2rem;
+    font-weight: 600;
+    letter-spacing: 0.5px;
+  }
+}
+
+.list-container {
+  padding: 12px 16px;
+}
+
+.ingredient-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 13px 16px;
+  background: var(--surface-1);
+  border-radius: 10px;
+  margin-bottom: 6px;
+  cursor: pointer;
+  user-select: none;
+  -webkit-user-select: none;
+
+  &--done {
+    opacity: 0.45;
+
+    .ingredient-name {
+      text-decoration: line-through;
+    }
+  }
+}
+
+.ingredient-name {
+  font-family: 'Inter', sans-serif;
+  font-size: 0.95rem;
+  font-weight: 500;
+  flex: 1;
+  min-width: 0;
+}
+
+.meal-label {
+  font-family: 'Inter', sans-serif;
+  font-size: 0.8rem;
+  color: var(--ion-color-medium);
+  text-align: right;
+  flex-shrink: 0;
+  margin-left: 10px;
+  max-width: 42%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.complete-section {
+  margin-top: 20px;
+}
+
+.section-header {
+  font-family: 'Inter', sans-serif;
+  font-size: 0.72rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.07em;
+  color: var(--ion-color-medium);
+  margin: 0 0 8px 4px;
+}
+
+.empty-state {
+  font-family: 'Inter', sans-serif;
+  font-size: 0.9rem;
+  color: var(--ion-color-medium);
+  text-align: center;
+  padding: 48px 24px 0;
+  margin: 0;
+}

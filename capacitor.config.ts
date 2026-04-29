@@ -1,12 +1,12 @@
 import type { CapacitorConfig } from '@capacitor/cli';
 
 const config: CapacitorConfig = {
-  appId: 'com.rubenmay.mealplanner',
-  appName: 'Meal Planner',
+  appId: 'com.rubenmay.menuapp',
+  appName: 'Menu - Weekly Meal Planner',
   webDir: 'www',
   plugins: {
     Browser: {
-      androidScheme: 'mealplanner'
+      androidScheme: 'menuapp'
     }
   }
 };

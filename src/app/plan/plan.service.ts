@@ -1,44 +1,26 @@
 import { Injectable } from '@angular/core';
 import { MenuItem, SubMenu, WeekMealEntry } from './plan.models';
+import { DbService } from '../shared/db.service';
 
 @Injectable({ providedIn: 'root' })
 export class PlanService {
+  constructor(private readonly db: DbService) {}
 
-  getSubMenus(dayIndex: number): SubMenu[] {
-    try {
-      return JSON.parse(localStorage.getItem(`day-submenus-${dayIndex}`) ?? '[]');
-    } catch {
-      return [];
-    }
-  }
+  getSubMenus(dayIndex: number): Promise<SubMenu[]> { return this.db.getSubMenus(dayIndex); }
+  setSubMenus(dayIndex: number, items: SubMenu[]): Promise<void> { return this.db.setSubMenus(dayIndex, items); }
+  getWeekMeals(year: number, week: number, dayIndex: number): Promise<WeekMealEntry[]> { return this.db.getWeekMeals(year, week, dayIndex); }
+  setWeekMeals(year: number, week: number, dayIndex: number, entries: WeekMealEntry[]): Promise<void> { return this.db.setWeekMeals(year, week, dayIndex, entries); }
 
-  setSubMenus(dayIndex: number, items: SubMenu[]): void {
-    localStorage.setItem(`day-submenus-${dayIndex}`, JSON.stringify(items));
-  }
-
-  getWeekMeals(year: number, week: number, dayIndex: number): WeekMealEntry[] {
-    try {
-      return JSON.parse(localStorage.getItem(`week-meals-${year}-${week}-${dayIndex}`) ?? '[]');
-    } catch {
-      return [];
-    }
-  }
-
-  setWeekMeals(year: number, week: number, dayIndex: number, entries: WeekMealEntry[]): void {
-    localStorage.setItem(`week-meals-${year}-${week}-${dayIndex}`, JSON.stringify(entries));
-  }
-
-  getMenuItems(year: number, week: number, dayIndex: number): MenuItem[] {
-    const submenus = this.getSubMenus(dayIndex);
-    const weekMeals = this.getWeekMeals(year, week, dayIndex);
+  async getMenuItems(year: number, week: number, dayIndex: number): Promise<MenuItem[]> {
+    const submenus = await this.db.getSubMenus(dayIndex);
+    const weekMeals = await this.db.getWeekMeals(year, week, dayIndex);
     return submenus.map(sm => {
       const meal = weekMeals.find(m => m.itemId === sm.id);
       return {
         id: sm.id,
         name: sm.name,
         tagIds: sm.tagIds,
-        mealName: meal?.mealName,
-        starred: meal?.starred
+        mealName: meal?.mealName
       };
     });
   }

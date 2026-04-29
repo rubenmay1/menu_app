@@ -1,4 +1,5 @@
 import { Component } from '@angular/core';
+import { Browser } from '@capacitor/browser';
 import { MealService } from './meal.service';
 import { TagService } from '../tags/tag.service';
 import { Meal, Ingredient } from './meal.model';
@@ -16,23 +17,34 @@ export class MealsPage {
   filteredMeals: Meal[] = [];
   tags: Tag[] = [];
   searchQuery: string = '';
+  mealUsageCounts: Map<string, number> = new Map();
 
   panelVisible: boolean = false;
   editingMealId: string | null = null;
   editingName: string = '';
-  editingTagId: string | null = null;
+  editingTagIds: string[] = [];
   editingIngredients: Ingredient[] = [];
+  editingRecipeUrl: string = '';
 
   ingredientsPopupVisible: boolean = false;
+
+  tooltipVisible: boolean = false;
+  tooltipMeal: Meal | null = null;
+
+  private readonly longPressTimers: Map<string, ReturnType<typeof setTimeout>> = new Map();
+  private longPressActive = false;
 
   constructor(
     private readonly mealService: MealService,
     private readonly tagService: TagService
   ) {}
 
-  ionViewWillEnter(): void {
-    this.meals = this.mealService.getMeals();
-    this.tags = this.tagService.getTags();
+  async ionViewWillEnter(): Promise<void> {
+    [this.meals, this.tags, this.mealUsageCounts] = await Promise.all([
+      this.mealService.getMeals(),
+      this.tagService.getTags(),
+      this.mealService.getMealUsageCounts()
+    ]);
     this.applySearch();
   }
 
@@ -43,24 +55,78 @@ export class MealsPage {
 
   private applySearch(): void {
     const q = this.searchQuery.toLowerCase().trim();
-    this.filteredMeals = q
-      ? this.meals.filter(m => m.name.toLowerCase().includes(q))
-      : [...this.meals];
+    const source = q ? this.meals.filter(m => m.name.toLowerCase().includes(q)) : [...this.meals];
+    this.filteredMeals = source.sort((a, b) => a.name.localeCompare(b.name));
   }
+
+  // ---- Long-press / tap handling on meal rows ----
+
+  onMealPointerDown(meal: Meal): void {
+    const timer = setTimeout(() => {
+      this.longPressActive = true;
+      this.longPressTimers.delete(meal.id);
+      this.openEditor(meal);
+    }, 500);
+    this.longPressTimers.set(meal.id, timer);
+  }
+
+  onMealPointerUp(meal: Meal): void {
+    this.cancelLongPress(meal.id);
+  }
+
+  onMealPointerLeave(meal: Meal): void {
+    this.cancelLongPress(meal.id);
+  }
+
+  onMealClick(meal: Meal): void {
+    if (this.longPressActive) {
+      this.longPressActive = false;
+      return;
+    }
+    if (meal.recipeUrl) {
+      this.tooltipMeal = meal;
+      this.tooltipVisible = true;
+    }
+  }
+
+  private cancelLongPress(id: string): void {
+    const timer = this.longPressTimers.get(id);
+    if (timer !== undefined) {
+      clearTimeout(timer);
+      this.longPressTimers.delete(id);
+    }
+  }
+
+  // ---- Recipe tooltip ----
+
+  closeTooltip(): void {
+    this.tooltipVisible = false;
+    this.tooltipMeal = null;
+  }
+
+  async openRecipe(): Promise<void> {
+    const url = this.tooltipMeal?.recipeUrl;
+    if (!url) return;
+    await Browser.open({ url });
+  }
+
+  // ---- Editor panel ----
 
   openCreator(): void {
     this.editingMealId = null;
     this.editingName = '';
-    this.editingTagId = null;
+    this.editingTagIds = [];
     this.editingIngredients = [];
+    this.editingRecipeUrl = '';
     this.panelVisible = true;
   }
 
   openEditor(meal: Meal): void {
     this.editingMealId = meal.id;
     this.editingName = meal.name;
-    this.editingTagId = meal.tagId;
+    this.editingTagIds = [...meal.tagIds];
     this.editingIngredients = [...meal.ingredients];
+    this.editingRecipeUrl = meal.recipeUrl ?? '';
     this.panelVisible = true;
   }
 
@@ -70,20 +136,27 @@ export class MealsPage {
     this.ingredientsPopupVisible = false;
   }
 
-  savePanel(): void {
+  async savePanel(): Promise<void> {
     const name = this.editingName.trim();
     if (!name) return;
     const id = this.editingMealId ?? this.mealService.createId();
-    this.mealService.saveMeal({ id, name, tagId: this.editingTagId, ingredients: [...this.editingIngredients] });
-    this.meals = this.mealService.getMeals();
+    const recipeUrl = this.editingRecipeUrl.trim() || undefined;
+    await this.mealService.saveMeal({ id, name, tagIds: [...this.editingTagIds], ingredients: [...this.editingIngredients], recipeUrl });
+    [this.meals, this.mealUsageCounts] = await Promise.all([
+      this.mealService.getMeals(),
+      this.mealService.getMealUsageCounts()
+    ]);
     this.applySearch();
     this.closePanel();
   }
 
-  deleteMeal(): void {
+  async deleteMeal(): Promise<void> {
     if (!this.editingMealId) return;
-    this.mealService.deleteMeal(this.editingMealId);
-    this.meals = this.mealService.getMeals();
+    await this.mealService.deleteMeal(this.editingMealId);
+    [this.meals, this.mealUsageCounts] = await Promise.all([
+      this.mealService.getMeals(),
+      this.mealService.getMealUsageCounts()
+    ]);
     this.applySearch();
     this.closePanel();
   }
@@ -107,7 +180,15 @@ export class MealsPage {
     this.editingIngredients = this.editingIngredients.filter(i => i.id !== id);
   }
 
-  getTag(tagId: string | null): Tag | undefined {
-    return tagId ? this.tags.find(t => t.id === tagId) : undefined;
+  getTag(tagId: string): Tag | undefined {
+    return this.tags.find(t => t.id === tagId);
+  }
+
+  toggleTag(tagId: string): void {
+    if (this.editingTagIds.includes(tagId)) {
+      this.editingTagIds = this.editingTagIds.filter(id => id !== tagId);
+    } else {
+      this.editingTagIds = [...this.editingTagIds, tagId];
+    }
   }
 }
