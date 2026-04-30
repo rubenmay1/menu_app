@@ -8,6 +8,21 @@
     [debounce]="0"
   ></ion-searchbar>
 
+  <div class="filter-pills" *ngIf="tags.length > 0">
+    <button
+      class="filter-pill"
+      *ngFor="let tag of tags"
+      [class.filter-pill--active]="filterTagIds.includes(tag.id)"
+      [style.border-color]="tag.color"
+      [style.background-color]="filterTagIds.includes(tag.id) ? tag.color : ''"
+      [style.color]="filterTagIds.includes(tag.id) ? '#fff' : tag.color"
+      (click)="toggleFilterTag(tag.id)"
+    >
+      <ion-icon *ngIf="filterTagIds.includes(tag.id)" name="checkmark" class="filter-pill-check"></ion-icon>
+      {{ tag.name }}
+    </button>
+  </div>
+
   <div class="meal-list" *ngIf="filteredMeals.length > 0">
       <div
         class="meal-row"
@@ -143,9 +158,18 @@
   <div class="recipe-backdrop" *ngIf="tooltipVisible" (click)="closeTooltip()">
     <div class="recipe-tooltip" (click)="$event.stopPropagation()">
       <p class="recipe-tooltip-name">{{ tooltipMeal?.name }}</p>
-      <ion-button expand="block" (click)="openRecipe()">
-        <ion-icon slot="start" name="open-outline"></ion-icon>
-        Go to Recipe
+      <ng-container *ngIf="tooltipMeal?.recipeUrl; else noRecipe">
+        <ion-button expand="block" (click)="openRecipe()">
+          <ion-icon slot="start" name="open-outline"></ion-icon>
+          Go to Recipe
+        </ion-button>
+      </ng-container>
+      <ng-template #noRecipe>
+        <p class="recipe-tooltip-hint">No recipe added yet.</p>
+      </ng-template>
+      <ion-button expand="block" fill="outline" (click)="editFromTooltip()">
+        <ion-icon slot="start" name="create-outline"></ion-icon>
+        Edit
       </ion-button>
     </div>
   </div>

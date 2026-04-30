@@ -23,7 +23,12 @@ export class DropboxService {
   readonly connecting$: Observable<boolean> = this.connectingSubject.asObservable();
   private connectTimeout: ReturnType<typeof setTimeout> | null = null;
 
-  constructor(private db: DbService) {}
+  private readonly connectedSubject = new BehaviorSubject<boolean>(false);
+  readonly connected$: Observable<boolean> = this.connectedSubject.asObservable();
+
+  constructor(private db: DbService) {
+    this.connectedSubject.next(this.isConnected());
+  }
 
   private get redirectUri(): string {
     return Capacitor.isNativePlatform()
@@ -118,6 +123,7 @@ export class DropboxService {
       try { await Browser.close(); } catch { /* ignore if already closed */ }
     }
 
+    this.connectedSubject.next(true);
     this.clearConnecting();
   }
 
@@ -133,6 +139,7 @@ export class DropboxService {
     [LS_TOKEN, LS_REFRESH, LS_VERIFIER, LS_LAST_SYNC, LS_CONNECT_DISMISSED].forEach(k =>
       localStorage.removeItem(k),
     );
+    this.connectedSubject.next(false);
   }
 
   async sync(): Promise<void> {

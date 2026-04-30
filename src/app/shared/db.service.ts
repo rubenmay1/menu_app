@@ -1,7 +1,8 @@
 import { Injectable } from '@angular/core';
+import { Subject, Observable } from 'rxjs';
 import { Tag } from '../tags/tag.model';
 import { Meal } from '../meals/meal.model';
-import { SubMenu, WeekMealEntry } from '../plan/plan.models';
+import { SubMenu, WeekMealEntry, ExtraEntry } from '../plan/plan.models';
 
 // All storage is localStorage. To migrate to SQLite:
 // 1. Import CapacitorSQLite, SQLiteConnection from @capacitor-community/sqlite
@@ -11,6 +12,9 @@ import { SubMenu, WeekMealEntry } from '../plan/plan.models';
 
 @Injectable({ providedIn: 'root' })
 export class DbService {
+
+  private readonly dataChangedSubject = new Subject<void>();
+  readonly dataChanged$: Observable<void> = this.dataChangedSubject.asObservable();
 
   async initialize(): Promise<void> {
     this.seedDefaultsIfNeeded();
@@ -124,6 +128,63 @@ export class DbService {
     }
   }
 
+  // ---- Share / Import ----
+
+  exportTagsAndMeals(): { tags: Tag[]; meals: Meal[] } {
+    const tags: Tag[] = JSON.parse(localStorage.getItem('tags') ?? '[]');
+    const meals: Meal[] = JSON.parse(localStorage.getItem('meals') ?? '[]');
+    return { tags, meals };
+  }
+
+  importTagsAndMeals(data: { tags: Tag[]; meals: Meal[] }): void {
+    const existingTags: Tag[] = JSON.parse(localStorage.getItem('tags') ?? '[]');
+    for (const imported of data.tags) {
+      const idx = existingTags.findIndex(t => t.name.toLowerCase() === imported.name.toLowerCase());
+      if (idx >= 0) {
+        existingTags[idx] = { ...imported, id: existingTags[idx].id };
+      } else {
+        existingTags.push(imported);
+      }
+    }
+    localStorage.setItem('tags', JSON.stringify(existingTags));
+
+    const existingMeals: Meal[] = JSON.parse(localStorage.getItem('meals') ?? '[]');
+    for (const imported of data.meals) {
+      const idx = existingMeals.findIndex(m => m.name.toLowerCase() === imported.name.toLowerCase());
+      if (idx >= 0) {
+        existingMeals[idx] = { ...imported, id: existingMeals[idx].id };
+      } else {
+        existingMeals.push(imported);
+      }
+    }
+    localStorage.setItem('meals', JSON.stringify(existingMeals));
+
+    this.dataChangedSubject.next();
+  }
+
+  // ---- Extras ----
+
+  async getExtras(year: number, week: number): Promise<ExtraEntry[]> {
+    return JSON.parse(localStorage.getItem(`week-extras-${year}-${week}`) ?? '[]');
+  }
+
+  async setExtras(year: number, week: number, entries: ExtraEntry[]): Promise<void> {
+    localStorage.setItem(`week-extras-${year}-${week}`, JSON.stringify(entries));
+  }
+
+  // ---- Reset ----
+
+  resetAll(): void {
+    const toRemove: string[] = [];
+    for (let i = 0; i < localStorage.length; i++) {
+      const key = localStorage.key(i);
+      if (key && this.isDataKey(key)) toRemove.push(key);
+    }
+    toRemove.forEach(k => localStorage.removeItem(k));
+    this.seedDefaultsIfNeeded();
+    this.dataChangedSubject.next();
+  }
+
   // ---- Backup / Restore ----
 
   exportAll(): string {
@@ -148,6 +209,7 @@ export class DbService {
     for (const [key, value] of Object.entries(data)) {
       localStorage.setItem(key, value);
     }
+    this.dataChangedSubject.next();
   }
 
   private isDataKey(key: string): boolean {
@@ -155,7 +217,8 @@ export class DbService {
       key === 'tags' ||
       key === 'meals' ||
       key.startsWith('day-submenus-') ||
-      key.startsWith('week-meals-')
+      key.startsWith('week-meals-') ||
+      key.startsWith('week-extras-')
     );
   }
 }

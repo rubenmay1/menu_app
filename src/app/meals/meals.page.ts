@@ -1,7 +1,10 @@
-import { Component } from '@angular/core';
+import { Component, OnDestroy, OnInit } from '@angular/core';
+import { Platform } from '@ionic/angular';
 import { Browser } from '@capacitor/browser';
+import { Subscription } from 'rxjs';
 import { MealService } from './meal.service';
 import { TagService } from '../tags/tag.service';
+import { DbService } from '../shared/db.service';
 import { Meal, Ingredient } from './meal.model';
 import { Tag } from '../tags/tag.model';
 
@@ -11,12 +14,13 @@ import { Tag } from '../tags/tag.model';
   templateUrl: './meals.page.html',
   styleUrls: ['./meals.page.scss']
 })
-export class MealsPage {
+export class MealsPage implements OnInit, OnDestroy {
 
   meals: Meal[] = [];
   filteredMeals: Meal[] = [];
   tags: Tag[] = [];
   searchQuery: string = '';
+  filterTagIds: string[] = [];
   mealUsageCounts: Map<string, number> = new Map();
 
   panelVisible: boolean = false;
@@ -33,18 +37,56 @@ export class MealsPage {
 
   private readonly longPressTimers: Map<string, ReturnType<typeof setTimeout>> = new Map();
   private longPressActive = false;
+  private dataChangedSub!: Subscription;
+  private backButtonSub: Subscription | null = null;
 
   constructor(
     private readonly mealService: MealService,
-    private readonly tagService: TagService
+    private readonly tagService: TagService,
+    private readonly db: DbService,
+    private readonly platform: Platform,
   ) {}
 
+  ngOnInit(): void {
+    this.dataChangedSub = this.db.dataChanged$.subscribe(() => {
+      void this.reload();
+    });
+  }
+
+  ngOnDestroy(): void {
+    this.dataChangedSub.unsubscribe();
+  }
+
   async ionViewWillEnter(): Promise<void> {
-    [this.meals, this.tags, this.mealUsageCounts] = await Promise.all([
+    this.filterTagIds = [];
+    await this.reload();
+    this.backButtonSub = this.platform.backButton.subscribeWithPriority(10, (processNextHandler) => {
+      if (this.ingredientsPopupVisible) {
+        this.closeIngredientsPopup();
+      } else if (this.panelVisible) {
+        this.closePanel();
+      } else if (this.tooltipVisible) {
+        this.closeTooltip();
+      } else {
+        processNextHandler();
+      }
+    });
+  }
+
+  ionViewWillLeave(): void {
+    this.backButtonSub?.unsubscribe();
+    this.backButtonSub = null;
+  }
+
+  private async reload(): Promise<void> {
+    const [meals, tags, usageCounts] = await Promise.all([
       this.mealService.getMeals(),
       this.tagService.getTags(),
       this.mealService.getMealUsageCounts()
     ]);
+    this.meals = meals;
+    this.tags = tags.sort((a, b) => a.name.localeCompare(b.name));
+    this.mealUsageCounts = usageCounts;
     this.applySearch();
   }
 
@@ -53,9 +95,21 @@ export class MealsPage {
     this.applySearch();
   }
 
+  toggleFilterTag(tagId: string): void {
+    if (this.filterTagIds.includes(tagId)) {
+      this.filterTagIds = this.filterTagIds.filter(id => id !== tagId);
+    } else {
+      this.filterTagIds = [...this.filterTagIds, tagId];
+    }
+    this.applySearch();
+  }
+
   private applySearch(): void {
     const q = this.searchQuery.toLowerCase().trim();
-    const source = q ? this.meals.filter(m => m.name.toLowerCase().includes(q)) : [...this.meals];
+    let source = q ? this.meals.filter(m => m.name.toLowerCase().includes(q)) : [...this.meals];
+    if (this.filterTagIds.length > 0) {
+      source = source.filter(m => m.tagIds.some(id => this.filterTagIds.includes(id)));
+    }
     this.filteredMeals = source.sort((a, b) => a.name.localeCompare(b.name));
   }
 
@@ -83,10 +137,8 @@ export class MealsPage {
       this.longPressActive = false;
       return;
     }
-    if (meal.recipeUrl) {
-      this.tooltipMeal = meal;
-      this.tooltipVisible = true;
-    }
+    this.tooltipMeal = meal;
+    this.tooltipVisible = true;
   }
 
   private cancelLongPress(id: string): void {
@@ -108,6 +160,12 @@ export class MealsPage {
     const url = this.tooltipMeal?.recipeUrl;
     if (!url) return;
     await Browser.open({ url });
+  }
+
+  editFromTooltip(): void {
+    const meal = this.tooltipMeal;
+    this.closeTooltip();
+    if (meal) this.openEditor(meal);
   }
 
   // ---- Editor panel ----

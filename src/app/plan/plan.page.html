@@ -61,6 +61,25 @@
       </div>
 
     </div>
+
+    <!-- Extras card -->
+    <div class="day-card">
+      <div class="day-header extras-header">
+        <span class="day-name">Extras</span>
+      </div>
+      <div class="item-list">
+        <div class="menu-item extras-item" *ngFor="let entry of extrasEntries">
+          <span class="extras-meal-name">{{ entry.mealName }}</span>
+          <button class="extras-remove-btn" (click)="removeExtra(entry.id); $event.stopPropagation()">
+            <ion-icon name="close-outline"></ion-icon>
+          </button>
+        </div>
+        <div class="menu-item extras-add-row" (click)="openExtrasPicker()">
+          <em>Add other meals…</em>
+        </div>
+      </div>
+    </div>
+
   </div>
 
   </ng-container>
@@ -104,14 +123,14 @@
       <ng-container *ngIf="pickerMode === 'default'">
 
         <div class="picker-meals-section">
-          <ng-container *ngIf="pickerMeals.length > 0">
-            <div class="picker-meals-header">
-              <p class="picker-section-label">From Meals</p>
-              <ng-container *ngIf="tags?.length">
-                <app-tag-pill *ngFor="let t of pickerTags" [name]="t.name" [color]="t.color"></app-tag-pill>
-              </ng-container>
-            </div>
+          <div class="picker-meals-header">
+            <p class="picker-section-label">From Meals</p>
+            <ng-container *ngIf="tags?.length">
+              <app-tag-pill *ngFor="let t of pickerTags" [name]="t.name" [color]="t.color" size="sm"></app-tag-pill>
+            </ng-container>
+          </div>
 
+          <ng-container *ngIf="pickerMeals.length > 0; else noMeals">
             <div class="picker-meal-row" *ngFor="let meal of pickerMeals" (click)="selectMeal(meal)">
               <span class="picker-meal-name">{{ meal.name }}</span>
               <ng-container *ngIf="getMatchingTags(meal) as matchTags">
@@ -125,10 +144,11 @@
               </ng-container>
             </div>
           </ng-container>
-
-          <p class="picker-no-meals" *ngIf="pickerMeals.length === 0">
-            {{ itemPopupItem?.tagIds?.length ? 'No meals with this tag yet.' : 'No meals yet.' }}
-          </p>
+          <ng-template #noMeals>
+            <p class="picker-no-meals">
+              {{ itemPopupItem?.tagIds?.length ? 'No meals with this tag yet.' : 'No meals yet.' }}
+            </p>
+          </ng-template>
         </div>
 
         <div class="picker-meals-section">
@@ -168,6 +188,69 @@
           [disabled]="!customName.trim()"
         >
           Add to Plan
+        </ion-button>
+      </ng-container>
+
+    </div>
+  </div>
+
+  <!-- Extras picker popup -->
+  <div class="picker-backdrop" *ngIf="extrasPickerVisible" (click)="closeExtrasPicker()">
+    <div class="picker-popup" (click)="$event.stopPropagation()">
+
+      <button class="picker-close" (click)="closeExtrasPicker()">
+        <ion-icon name="close"></ion-icon>
+      </button>
+
+      <p class="picker-current-name">Extras</p>
+
+      <!-- Default mode -->
+      <ng-container *ngIf="extrasPickerMode === 'default'">
+        <div class="picker-meals-section">
+          <div class="picker-meals-header">
+            <p class="picker-section-label">From Meals</p>
+          </div>
+          <ng-container *ngIf="pickerMeals.length > 0; else extrasNoMeals">
+            <div class="picker-meal-row" *ngFor="let meal of pickerMeals" (click)="selectExtra(meal)">
+              <span class="picker-meal-name">{{ meal.name }}</span>
+              <ng-container *ngIf="mealUsageCounts.get(meal.name) as count">
+                <ion-icon name="flame-outline" class="picker-flame-icon"></ion-icon>
+                <span class="picker-flame-count">{{ count }}</span>
+              </ng-container>
+            </div>
+          </ng-container>
+          <ng-template #extrasNoMeals>
+            <p class="picker-no-meals">No meals yet.</p>
+          </ng-template>
+        </div>
+
+        <div class="picker-meals-section">
+          <div class="picker-meals-header">
+            <p class="picker-section-label">Other</p>
+          </div>
+          <div class="picker-meal-row" (click)="extrasPickerMode = 'custom'">
+            <ion-icon name="create-outline" class="other-row-icon"></ion-icon>
+            Custom
+          </div>
+        </div>
+      </ng-container>
+
+      <!-- Custom mode -->
+      <ng-container *ngIf="extrasPickerMode === 'custom'">
+        <div class="custom-row">
+          <input
+            class="custom-input"
+            [(ngModel)]="extrasCustomName"
+            placeholder="Meal name…"
+            (keyup.enter)="saveExtrasCustom()"
+            autofocus
+          />
+          <button class="star-btn" (click)="extrasCustomStarred = !extrasCustomStarred" [class.star-btn--active]="extrasCustomStarred">
+            <ion-icon [name]="extrasCustomStarred ? 'star' : 'star-outline'"></ion-icon>
+          </button>
+        </div>
+        <ion-button expand="block" class="custom-save-btn" (click)="saveExtrasCustom()" [disabled]="!extrasCustomName.trim()">
+          Add to Extras
         </ion-button>
       </ng-container>
 

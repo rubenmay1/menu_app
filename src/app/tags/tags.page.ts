@@ -1,5 +1,8 @@
-import { Component } from '@angular/core';
+import { Component, OnInit, OnDestroy } from '@angular/core';
+import { Platform } from '@ionic/angular';
+import { Subscription } from 'rxjs';
 import { TagService } from './tag.service';
+import { DbService } from '../shared/db.service';
 import { Tag } from './tag.model';
 import { PRESET_COLORS } from '../plan/plan.models';
 
@@ -9,7 +12,7 @@ import { PRESET_COLORS } from '../plan/plan.models';
   templateUrl: './tags.page.html',
   styleUrls: ['./tags.page.scss']
 })
-export class TagsPage {
+export class TagsPage implements OnInit, OnDestroy {
 
   tags: Tag[] = [];
   filteredTags: Tag[] = [];
@@ -25,9 +28,44 @@ export class TagsPage {
   editingName: string = '';
   editingColor: string = '';
 
-  constructor(private readonly tagService: TagService) {}
+  private dataChangedSub!: Subscription;
+  private backButtonSub: Subscription | null = null;
+
+  constructor(
+    private readonly tagService: TagService,
+    private readonly db: DbService,
+    private readonly platform: Platform,
+  ) {}
+
+  ngOnInit(): void {
+    this.dataChangedSub = this.db.dataChanged$.subscribe(() => {
+      void this.reload();
+    });
+  }
+
+  ngOnDestroy(): void {
+    this.dataChangedSub.unsubscribe();
+  }
 
   async ionViewWillEnter(): Promise<void> {
+    await this.reload();
+    this.backButtonSub = this.platform.backButton.subscribeWithPriority(10, (processNextHandler) => {
+      if (this.creatorVisible) {
+        this.closeCreator();
+      } else if (this.editorVisible) {
+        this.closeEditor();
+      } else {
+        processNextHandler();
+      }
+    });
+  }
+
+  ionViewWillLeave(): void {
+    this.backButtonSub?.unsubscribe();
+    this.backButtonSub = null;
+  }
+
+  private async reload(): Promise<void> {
     this.tags = await this.tagService.getTags();
     this.applyFilter();
   }

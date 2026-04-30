@@ -1,5 +1,5 @@
 import { Injectable } from '@angular/core';
-import { MenuItem, SubMenu, WeekMealEntry } from './plan.models';
+import { MenuItem, SubMenu, WeekMealEntry, ExtraEntry } from './plan.models';
 import { DbService } from '../shared/db.service';
 
 @Injectable({ providedIn: 'root' })
@@ -25,6 +25,9 @@ export class PlanService {
       };
     });
   }
+
+  getExtras(year: number, week: number): Promise<ExtraEntry[]> { return this.db.getExtras(year, week); }
+  setExtras(year: number, week: number, entries: ExtraEntry[]): Promise<void> { return this.db.setExtras(year, week, entries); }
 
   createItemId(): string {
     return `item-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`;

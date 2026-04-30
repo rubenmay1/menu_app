@@ -154,9 +154,10 @@
   background: rgba(0, 0, 0, 0.6);
   z-index: 2000;
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   justify-content: center;
   padding: 24px;
+  overflow-y: auto;
 }
 
 .picker-popup {
@@ -164,10 +165,9 @@
   border-radius: 12px;
   width: 100%;
   max-width: 360px;
-  max-height: 75vh;
-  overflow-y: auto;
   padding: 20px;
   position: relative;
+  margin: auto;
 }
 
 .picker-close {
@@ -269,7 +269,7 @@
   display: flex;
   align-items: center;
   flex-wrap: wrap;
-  gap: 8px;
+  gap: 4px;
   margin-bottom: 6px;
   margin-top: 12px;
 }
@@ -281,13 +281,12 @@
   text-transform: uppercase;
   letter-spacing: 0.06em;
   color: var(--ion-color-medium);
-  margin: 0;
+  margin-right: 4px;
 }
 
 .picker-meals-section {
   border-top: 1px solid rgba(255, 255, 255, 0.1);
-  padding-top: 16px;
-  padding-bottom: 4px;
+  margin-top: 8px;
 }
 
 .picker-meal-row {
@@ -326,17 +325,18 @@
 }
 
 .picker-flame-icon {
-  font-size: 0.95rem;
+  font-size: 1.05rem;
   color: var(--ion-color-warning, #ffc409);
   flex-shrink: 0;
 }
 
 .picker-flame-count {
   font-family: 'Inter', sans-serif;
-  font-size: 0.78rem;
+  font-size: 0.9rem;
   font-weight: 500;
   color: var(--ion-color-warning, #ffc409);
   flex-shrink: 0;
+  margin-left: -4px;
 }
 
 .picker-no-meals {
@@ -393,4 +393,35 @@
 .custom-save-btn {
   margin-top: 4px;
   margin-bottom: 0;
+}
+
+// Extras card
+.extras-header {
+  cursor: default;
+  pointer-events: none;
+}
+
+.extras-meal-name {
+  font-family: 'Inter', sans-serif;
+  font-size: 0.9rem;
+  flex: 1;
+}
+
+.extras-remove-btn {
+  background: none;
+  border: none;
+  padding: 4px;
+  cursor: pointer;
+  color: rgba(255, 255, 255, 0.35);
+  display: flex;
+  align-items: center;
+  font-size: 1.1rem;
+  flex-shrink: 0;
+}
+
+.extras-add-row {
+  cursor: pointer;
+  color: var(--ion-color-medium);
+  font-family: 'Inter', sans-serif;
+  font-size: 0.9rem;
 }

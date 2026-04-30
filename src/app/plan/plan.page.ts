@@ -1,12 +1,14 @@
-import { Component, OnInit, AfterViewInit, AfterViewChecked, ViewChild, ViewChildren, QueryList, ElementRef } from '@angular/core';
-import { IonContent } from '@ionic/angular';
-import { DayEntry, WeekState, MenuItem, ResolvedMenuItem } from './plan.models';
+import { Component, OnInit, OnDestroy, AfterViewInit, AfterViewChecked, ViewChild, ViewChildren, QueryList, ElementRef } from '@angular/core';
+import { IonContent, Platform } from '@ionic/angular';
+import { Subscription } from 'rxjs';
+import { DayEntry, WeekState, MenuItem, ResolvedMenuItem, ExtraEntry } from './plan.models';
 import { PlanService } from './plan.service';
 import { TagService } from '../tags/tag.service';
 import { Tag } from '../tags/tag.model';
 import { EditorItem } from '../shared/item-editor.component';
 import { MealService } from '../meals/meal.service';
 import { Meal } from '../meals/meal.model';
+import { DbService } from '../shared/db.service';
 import { getISOWeek, getISOWeekYear, getMondayOfISOWeek, formatShortDate } from '../shared/week-utils';
 import { WeekStateService } from '../shared/week-state.service';
 
@@ -20,7 +22,7 @@ const DAY_NAMES: string[] = [
   templateUrl: './plan.page.html',
   styleUrls: ['./plan.page.scss']
 })
-export class PlanPage implements OnInit, AfterViewInit, AfterViewChecked {
+export class PlanPage implements OnInit, OnDestroy, AfterViewInit, AfterViewChecked {
 
   @ViewChild(IonContent, { read: ElementRef }) private contentRef!: ElementRef;
   @ViewChildren('mealNameEl') private mealNameEls!: QueryList<ElementRef>;
@@ -45,6 +47,12 @@ export class PlanPage implements OnInit, AfterViewInit, AfterViewChecked {
   pickerTags: Tag[] = [];
   mealUsageCounts: Map<string, number> = new Map();
 
+  extrasEntries: ExtraEntry[] = [];
+  extrasPickerVisible: boolean = false;
+  extrasPickerMode: 'default' | 'custom' = 'default';
+  extrasCustomName: string = '';
+  extrasCustomStarred: boolean = false;
+
   slideDir: 'left' | 'right' | '' = '';
 
   private longPressTimers: Map<number, ReturnType<typeof setTimeout>> = new Map();
@@ -52,16 +60,27 @@ export class PlanPage implements OnInit, AfterViewInit, AfterViewChecked {
   private itemLongPressActive = false;
   private lastWeekNavAt = 0;
   private slideTimer: ReturnType<typeof setTimeout> | null = null;
+  private dataChangedSub!: Subscription;
+  private backButtonSub: Subscription | null = null;
 
   constructor(
     private readonly planService: PlanService,
     private readonly tagService: TagService,
     private readonly mealService: MealService,
-    private readonly weekState: WeekStateService
+    private readonly weekState: WeekStateService,
+    private readonly db: DbService,
+    private readonly platform: Platform,
   ) {}
 
   async ngOnInit(): Promise<void> {
     await this.loadWeek(this.weekState.year, this.weekState.isoWeek);
+    this.dataChangedSub = this.db.dataChanged$.subscribe(() => {
+      this.loadWeek(this.weekState.year, this.weekState.isoWeek);
+    });
+  }
+
+  ngOnDestroy(): void {
+    this.dataChangedSub.unsubscribe();
   }
 
   ngAfterViewInit(): void {
@@ -108,6 +127,24 @@ export class PlanPage implements OnInit, AfterViewInit, AfterViewChecked {
     } else {
       await this.loadWeek(this.weekState.year, this.weekState.isoWeek);
     }
+    this.backButtonSub = this.platform.backButton.subscribeWithPriority(10, (processNextHandler) => {
+      if (this.extrasPickerVisible) {
+        if (this.extrasPickerMode === 'custom') { this.extrasPickerMode = 'default'; }
+        else { this.closeExtrasPicker(); }
+      } else if (this.itemPopupVisible) {
+        if (this.pickerMode === 'custom') { this.pickerMode = 'default'; }
+        else { this.closeItemPopup(); }
+      } else if (this.dayEditorVisible) {
+        this.closeDayEditor();
+      } else {
+        processNextHandler();
+      }
+    });
+  }
+
+  ionViewWillLeave(): void {
+    this.backButtonSub?.unsubscribe();
+    this.backButtonSub = null;
   }
 
   isDayComplete(day: DayEntry): boolean {
@@ -238,6 +275,7 @@ export class PlanPage implements OnInit, AfterViewInit, AfterViewChecked {
         items: this.resolveItems(await this.planService.getMenuItems(year, isoWeek, i))
       };
     }));
+    this.extrasEntries = await this.planService.getExtras(year, isoWeek);
     this.week = { year, isoWeek, days };
     this.initTagVisibility();
   }
@@ -381,7 +419,7 @@ export class PlanPage implements OnInit, AfterViewInit, AfterViewChecked {
     this.mealUsageCounts = usageCounts;
     if (item.tagIds.length > 0) {
       this.pickerMeals = meals.filter(m => m.tagIds.length === 0 || m.tagIds.some(tid => item.tagIds.includes(tid)));
-      this.pickerTags = item.resolvedTags;
+      this.pickerTags = [...item.resolvedTags].sort((a, b) => a.name.localeCompare(b.name));
     } else {
       this.pickerMeals = meals;
       this.pickerTags = [];
@@ -445,6 +483,55 @@ export class PlanPage implements OnInit, AfterViewInit, AfterViewChecked {
     if (!this.itemPopupItem) return;
     await this.saveItemUpdate({ mealName: meal.name });
     this.closeItemPopup();
+  }
+
+  async openExtrasPicker(): Promise<void> {
+    const [meals, usageCounts] = await Promise.all([
+      this.mealService.getMeals(),
+      this.mealService.getMealUsageCounts()
+    ]);
+    this.mealUsageCounts = usageCounts;
+    this.pickerMeals = meals.sort((a, b) => {
+      const ua = usageCounts.get(a.name) ?? 0;
+      const ub = usageCounts.get(b.name) ?? 0;
+      if (ub !== ua) return ub - ua;
+      return a.name.localeCompare(b.name);
+    });
+    this.extrasPickerMode = 'default';
+    this.extrasCustomName = '';
+    this.extrasCustomStarred = false;
+    this.extrasPickerVisible = true;
+  }
+
+  closeExtrasPicker(): void {
+    this.extrasPickerVisible = false;
+  }
+
+  async selectExtra(meal: Meal): Promise<void> {
+    await this.addExtra(meal.name);
+    this.closeExtrasPicker();
+  }
+
+  async saveExtrasCustom(): Promise<void> {
+    const name = this.extrasCustomName.trim();
+    if (!name) return;
+    if (this.extrasCustomStarred) {
+      await this.mealService.saveMeal({ id: this.mealService.createId(), name, tagIds: [], ingredients: [] });
+    }
+    await this.addExtra(name);
+    this.closeExtrasPicker();
+  }
+
+  private async addExtra(mealName: string): Promise<void> {
+    const { year, isoWeek } = this.week;
+    this.extrasEntries = [...this.extrasEntries, { id: this.planService.createItemId(), mealName }];
+    await this.planService.setExtras(year, isoWeek, this.extrasEntries);
+  }
+
+  async removeExtra(id: string): Promise<void> {
+    const { year, isoWeek } = this.week;
+    this.extrasEntries = this.extrasEntries.filter(e => e.id !== id);
+    await this.planService.setExtras(year, isoWeek, this.extrasEntries);
   }
 
   private async saveItemUpdate(changes: { mealName?: string }): Promise<void> {

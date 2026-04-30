@@ -1,8 +1,11 @@
-import { Component, AfterViewInit, ViewChild, ElementRef } from '@angular/core';
+import { Component, OnDestroy, AfterViewInit, ViewChild, ElementRef } from '@angular/core';
 import { IonContent } from '@ionic/angular';
+import { Subscription } from 'rxjs';
 import { PlanService } from '../plan/plan.service';
+import { ExtraEntry } from '../plan/plan.models';
 import { MealService } from '../meals/meal.service';
 import { Meal } from '../meals/meal.model';
+import { DbService } from '../shared/db.service';
 import { getISOWeek, getISOWeekYear } from '../shared/week-utils';
 import { WeekStateService } from '../shared/week-state.service';
 
@@ -21,7 +24,7 @@ const DAY_COUNT = 7;
   templateUrl: './shopping.page.html',
   styleUrls: ['./shopping.page.scss']
 })
-export class ShoppingPage implements AfterViewInit {
+export class ShoppingPage implements OnDestroy, AfterViewInit {
 
   @ViewChild(IonContent, { read: ElementRef }) private contentRef!: ElementRef;
 
@@ -29,14 +32,24 @@ export class ShoppingPage implements AfterViewInit {
   activeItems: ShoppingItem[] = [];
   doneItems: ShoppingItem[] = [];
 
+  private dataChangedSub!: Subscription;
+
   constructor(
     private readonly planService: PlanService,
     private readonly mealService: MealService,
-    private readonly weekState: WeekStateService
+    private readonly weekState: WeekStateService,
+    private readonly db: DbService,
   ) {}
 
   ngAfterViewInit(): void {
     this.setupSwipeGesture();
+    this.dataChangedSub = this.db.dataChanged$.subscribe(() => {
+      void this.loadWeek(this.weekState.year, this.weekState.isoWeek);
+    });
+  }
+
+  ngOnDestroy(): void {
+    this.dataChangedSub.unsubscribe();
   }
 
   async ionViewWillEnter(): Promise<void> {
@@ -105,6 +118,21 @@ export class ShoppingPage implements AfterViewInit {
             done: doneKeys.has(key)
           });
         }
+      }
+    }
+
+    const extras: ExtraEntry[] = await this.planService.getExtras(year, isoWeek);
+    for (const entry of extras) {
+      if (!entry.mealName) continue;
+      const meal = mealByName.get(entry.mealName.toLowerCase());
+      if (!meal || meal.ingredients.length === 0) {
+        const key = `no-ingredients-extra-${entry.id}`;
+        allItems.push({ key, ingredientName: `Ingredients for ${entry.mealName}`, mealName: entry.mealName, done: doneKeys.has(key) });
+        continue;
+      }
+      for (const ingredient of meal.ingredients) {
+        const key = `${meal.id}-${ingredient.id}-extra-${entry.id}`;
+        allItems.push({ key, ingredientName: ingredient.name, mealName: meal.name, done: doneKeys.has(key) });
       }
     }
 

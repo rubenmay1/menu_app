@@ -4,7 +4,7 @@
   <div class="section">
     <div class="section-label">Dropbox</div>
 
-    <div class="card" *ngIf="!dropbox.isConnected()">
+    <div class="card" *ngIf="!isConnected">
       <p class="hint">Connect Dropbox to back up and restore your data.</p>
       <ion-button expand="block" (click)="connectDropbox()" [disabled]="isConnecting">
         <ion-spinner *ngIf="isConnecting" slot="start" name="crescent"></ion-spinner>
@@ -13,7 +13,7 @@
       </ion-button>
     </div>
 
-    <div class="card" *ngIf="dropbox.isConnected()">
+    <div class="card" *ngIf="isConnected">
       <div class="last-sync">
         <ion-icon name="time-outline"></ion-icon>
         <span>{{ lastSyncLabel }}</span>
@@ -32,4 +32,59 @@
       </ion-button>
     </div>
   </div>
+
+  <div class="section">
+    <div class="section-label">Sharing</div>
+    <div class="card">
+      <p class="hint">Share your meals and tags with another device. The recipient will be offered an import prompt when they open the link.</p>
+      <ion-button expand="block" fill="outline" (click)="shareTagsAndMeals()">
+        <ion-icon slot="start" name="share-social-outline"></ion-icon>
+        Share Tags &amp; Meals
+      </ion-button>
+    </div>
+  </div>
+
+  <div class="section">
+    <div class="section-label">Data</div>
+    <div class="card">
+      <ion-button expand="block" class="btn-delete" fill="outline" (click)="onResetStart()">
+        <ion-icon slot="start" name="trash-outline"></ion-icon>
+        Reset App Data
+      </ion-button>
+    </div>
+  </div>
 </ion-content>
+
+<div class="sync-backdrop" *ngIf="resetStep === 1" (click)="onResetCancel()">
+  <div class="sync-popup" (click)="$event.stopPropagation()">
+    <div class="sync-popup-icon">
+      <ion-icon name="warning-outline"></ion-icon>
+    </div>
+    <p class="sync-popup-title">Reset App Data?</p>
+    <p class="sync-popup-message">Completing this action will remove all data from this app.</p>
+    <div class="sync-popup-actions">
+      <ion-button expand="block" class="btn-delete" fill="outline" (click)="onResetConfirmFirst()">
+        <ion-icon slot="start" name="trash-outline"></ion-icon>
+        Reset
+      </ion-button>
+      <ion-button expand="block" (click)="onResetCancel()">Cancel</ion-button>
+    </div>
+  </div>
+</div>
+
+<div class="sync-backdrop" *ngIf="resetStep === 2" (click)="onResetCancel()">
+  <div class="sync-popup" (click)="$event.stopPropagation()">
+    <div class="sync-popup-icon">
+      <ion-icon name="warning-outline"></ion-icon>
+    </div>
+    <p class="sync-popup-title">Are you really sure?</p>
+    <p class="sync-popup-message">This cannot be undone.</p>
+    <div class="sync-popup-actions">
+      <ion-button expand="block" (click)="onResetCancel()">Cancel</ion-button>
+      <ion-button expand="block" class="btn-delete" fill="outline" (click)="onResetConfirm()">
+        <ion-icon slot="start" name="trash-outline"></ion-icon>
+        Reset
+      </ion-button>
+    </div>
+  </div>
+</div>

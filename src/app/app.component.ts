@@ -1,7 +1,9 @@
-import { Component, OnInit } from '@angular/core';
+import { Component, NgZone, OnInit } from '@angular/core';
 import { App } from '@capacitor/app';
 import { Capacitor } from '@capacitor/core';
-import { AlertController } from '@ionic/angular';
+import { AlertController, Platform } from '@ionic/angular';
+import { Tag } from './tags/tag.model';
+import { Meal } from './meals/meal.model';
 import { DbService } from './shared/db.service';
 import { DropboxService } from './shared/dropbox.service';
 
@@ -30,6 +32,11 @@ export class AppComponent implements OnInit {
   splashVisible = true;
   splashHiding = false;
   connectPromptVisible = false;
+  syncPromptVisible = false;
+  syncPromptMessage = '';
+  importPromptVisible = false;
+  importPromptMessage = '';
+  private pendingImportData: { tags: Tag[]; meals: Meal[] } | null = null;
 
   tutorialVisible = false;
   tutorialText = '';
@@ -44,6 +51,8 @@ export class AppComponent implements OnInit {
     private readonly db: DbService,
     private dropbox: DropboxService,
     private alertCtrl: AlertController,
+    private ngZone: NgZone,
+    private platform: Platform,
   ) {}
 
   async ngOnInit(): Promise<void> {
@@ -68,21 +77,32 @@ export class AppComponent implements OnInit {
         }
 
         if (this.dropbox.isConnected()) {
-          await this.showSyncPrompt();
+          this.showSyncPrompt();
         } else if (this.dropbox.shouldPromptConnect()) {
           this.connectPromptVisible = true;
         }
       }, 400);
     }, 1600);
 
-    App.addListener('appUrlOpen', async (data) => {
-      if (data.url.startsWith('menu-app://dropbox-callback')) {
-        try {
-          await this.dropbox.handleCallback(data.url);
-        } catch (e: unknown) {
-          await this.showError(e);
+    this.platform.backButton.subscribeWithPriority(20, (processNextHandler) => {
+      if (this.syncPromptVisible) { this.onSyncSkip(); }
+      else if (this.importPromptVisible) { this.onImportCancel(); }
+      else if (this.connectPromptVisible) { this.onConnectLater(); }
+      else { processNextHandler(); }
+    });
+
+    App.addListener('appUrlOpen', (data) => {
+      this.ngZone.run(async () => {
+        if (data.url.startsWith('menu-app://dropbox-callback')) {
+          try {
+            await this.dropbox.handleCallback(data.url);
+          } catch (e: unknown) {
+            await this.showError(e);
+          }
+        } else if (data.url.startsWith('menu-app://import')) {
+          this.handleImportUrl(data.url);
         }
-      }
+      });
     });
   }
 
@@ -153,25 +173,54 @@ export class AppComponent implements OnInit {
     this.dropbox.dismissConnectPrompt();
   }
 
-  private async showSyncPrompt(): Promise<void> {
+  private showSyncPrompt(): void {
     const last = this.dropbox.getLastSyncTime();
-    const message = last
+    this.syncPromptMessage = last
       ? `Last backed up: ${last.toLocaleString()}`
       : 'You have not backed up yet.';
-    const alert = await this.alertCtrl.create({
-      header: 'Sync to Dropbox?',
-      message,
-      buttons: [
-        { text: 'Skip', role: 'cancel' },
-        {
-          text: 'Back up now',
-          handler: () => {
-            this.runBackgroundSync();
-          },
-        },
-      ],
-    });
-    await alert.present();
+    this.syncPromptVisible = true;
+  }
+
+  onSyncBackUp(): void {
+    this.syncPromptVisible = false;
+    this.runBackgroundSync();
+  }
+
+  onSyncSkip(): void {
+    this.syncPromptVisible = false;
+  }
+
+  // ---- Import ----
+
+  private handleImportUrl(url: string): void {
+    try {
+      const params = new URL(url).searchParams;
+      const encoded = params.get('data');
+      if (!encoded) return;
+      const json = decodeURIComponent(atob(decodeURIComponent(encoded)));
+      const data = JSON.parse(json) as { tags: Tag[]; meals: Meal[] };
+      if (!Array.isArray(data.tags) || !Array.isArray(data.meals)) return;
+      const tagCount = data.tags.length;
+      const mealCount = data.meals.length;
+      this.pendingImportData = data;
+      this.importPromptMessage = `Import ${tagCount} tag${tagCount !== 1 ? 's' : ''} and ${mealCount} meal${mealCount !== 1 ? 's' : ''}? Existing items with the same name will be overwritten.`;
+      this.importPromptVisible = true;
+    } catch {
+      // malformed URL — ignore
+    }
+  }
+
+  onImportConfirm(): void {
+    if (this.pendingImportData) {
+      this.db.importTagsAndMeals(this.pendingImportData);
+    }
+    this.importPromptVisible = false;
+    this.pendingImportData = null;
+  }
+
+  onImportCancel(): void {
+    this.importPromptVisible = false;
+    this.pendingImportData = null;
   }
 
   private runBackgroundConnect(): void {

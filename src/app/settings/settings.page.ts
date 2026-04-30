@@ -1,6 +1,8 @@
 import { Component, OnDestroy } from '@angular/core';
 import { Subscription } from 'rxjs';
-import { AlertController } from '@ionic/angular';
+import { AlertController, Platform } from '@ionic/angular';
+import { Share } from '@capacitor/share';
+import { DbService } from '../shared/db.service';
 import { DropboxService } from '../shared/dropbox.service';
 
 @Component({
@@ -14,18 +16,41 @@ export class SettingsPage implements OnDestroy {
   isSyncing = false;
   isRestoring = false;
   isConnecting = false;
+  isConnected = false;
+  resetStep: 0 | 1 | 2 = 0;
 
-  private connectSub: Subscription;
+  private subs: Subscription[] = [];
+  private backButtonSub: Subscription | null = null;
 
   constructor(
-    public dropbox: DropboxService,
+    private db: DbService,
+    private dropbox: DropboxService,
     private alertCtrl: AlertController,
+    private platform: Platform,
   ) {
-    this.connectSub = this.dropbox.connecting$.subscribe(v => { this.isConnecting = v; });
+    this.subs.push(
+      this.dropbox.connecting$.subscribe(v => { this.isConnecting = v; }),
+      this.dropbox.connected$.subscribe(v => { this.isConnected = v; }),
+    );
   }
 
   ngOnDestroy(): void {
-    this.connectSub.unsubscribe();
+    this.subs.forEach(s => s.unsubscribe());
+  }
+
+  ionViewWillEnter(): void {
+    this.backButtonSub = this.platform.backButton.subscribeWithPriority(10, (processNextHandler) => {
+      if (this.resetStep > 0) {
+        this.onResetCancel();
+      } else {
+        processNextHandler();
+      }
+    });
+  }
+
+  ionViewWillLeave(): void {
+    this.backButtonSub?.unsubscribe();
+    this.backButtonSub = null;
   }
 
   get lastSyncLabel(): string {
@@ -89,6 +114,31 @@ export class SettingsPage implements OnDestroy {
       ],
     });
     await alert.present();
+  }
+
+  onResetStart(): void { this.resetStep = 1; }
+  onResetConfirmFirst(): void { this.resetStep = 2; }
+  onResetCancel(): void { this.resetStep = 0; }
+
+  onResetConfirm(): void {
+    this.db.resetAll();
+    this.resetStep = 0;
+  }
+
+  async shareTagsAndMeals(): Promise<void> {
+    const data = this.db.exportTagsAndMeals();
+    const json = JSON.stringify(data);
+    const b64 = btoa(encodeURIComponent(json));
+    const url = `menu-app://import?data=${encodeURIComponent(b64)}`;
+    try {
+      await Share.share({
+        title: 'Menu Tags & Meals',
+        text: url,
+        dialogTitle: 'Share Tags & Meals',
+      });
+    } catch {
+      // user cancelled share dialog — no-op
+    }
   }
 
   private async showError(e: unknown): Promise<void> {
