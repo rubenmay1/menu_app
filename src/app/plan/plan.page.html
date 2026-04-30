@@ -8,14 +8,20 @@
     [isoWeek]="week.isoWeek"
     [year]="week.year"
     [isComplete]="isWeekComplete"
+    [showArrows]="!readMode"
+    [showShare]="!readMode"
+    [showClear]="!readMode"
     (previousWeek)="goToPreviousWeek()"
     (nextWeek)="goToNextWeek()"
     (currentWeek)="goToCurrentWeek()"
+    (share)="shareWeek()"
+    (clearWeek)="openClearWeekPrompt()"
   ></app-week-nav>
 
   <div class="day-list"
     [class.slide-from-right]="slideDir === 'right'"
     [class.slide-from-left]="slideDir === 'left'"
+    [class.day-list--read-mode]="readMode"
   >
     <div class="day-card" *ngFor="let day of week.days; let i = index">
 
@@ -74,7 +80,7 @@
             <ion-icon name="close-outline"></ion-icon>
           </button>
         </div>
-        <div class="menu-item extras-add-row" (click)="openExtrasPicker()">
+        <div class="menu-item extras-add-row" *ngIf="!readMode" (click)="openExtrasPicker()">
           <em>Add other meals…</em>
         </div>
       </div>
@@ -83,6 +89,24 @@
   </div>
 
   </ng-container>
+
+  <!-- Clear week confirmation -->
+  <div class="sync-backdrop" *ngIf="clearWeekPromptVisible" (click)="onClearWeekCancel()">
+    <div class="sync-popup" (click)="$event.stopPropagation()">
+      <div class="sync-popup-icon">
+        <ion-icon name="warning-outline"></ion-icon>
+      </div>
+      <p class="sync-popup-title">Clear Week?</p>
+      <p class="sync-popup-message">This will remove all meals for the current week.</p>
+      <div class="sync-popup-actions">
+        <ion-button expand="block" class="btn-delete" fill="outline" (click)="onClearWeekConfirm()">
+          <ion-icon slot="start" name="trash-outline"></ion-icon>
+          Delete
+        </ion-button>
+        <ion-button expand="block" (click)="onClearWeekCancel()">Cancel</ion-button>
+      </div>
+    </div>
+  </div>
 
   <!-- Day editor (long-press) -->
   <div class="backdrop" *ngIf="dayEditorVisible" (click)="closeDayEditor()">

@@ -44,6 +44,28 @@ export interface ExtraEntry {
   mealName: string;
 }
 
+// ---- Shared / read-only plan link ----
+
+export interface SharedPlanItem {
+  id: string;
+  name: string;
+  mealName?: string;
+  tags: { name: string; color: string }[];
+}
+
+export interface SharedPlanDay {
+  dayName: string;
+  displayDate: string;
+  items: SharedPlanItem[];
+}
+
+export interface SharedPlanData {
+  year: number;
+  isoWeek: number;
+  days: SharedPlanDay[];
+  extras: { id: string; mealName: string }[];
+}
+
 export const PRESET_COLORS: string[] = [
   '#ef5350', '#ec407a', '#ab47bc', '#7e57c2',
   '#42a5f5', '#26c6da', '#26a69a', '#66bb6a',

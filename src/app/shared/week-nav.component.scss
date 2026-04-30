@@ -1,42 +1,90 @@
 .week-header {
-  display: flex;
+  display: grid;
+  grid-template-columns: 1fr auto 1fr;
   align-items: center;
-  justify-content: space-between;
   padding: 14px 8px 4px;
   background: var(--surface-0);
+}
 
-  .week-label {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    gap: 1px;
-    cursor: pointer;
-    user-select: none;
-    -webkit-user-select: none;
+.week-side {
+  display: flex;
+  align-items: center;
 
-    &:active { opacity: 0.6; }
+  &--right {
+    position: relative;
+    justify-content: flex-end;
   }
+}
 
-  .week-number {
-    font-family: 'Inter', sans-serif;
-    font-size: 1.2rem;
-    font-weight: 600;
-    letter-spacing: 0.5px;
-    display: inline-flex;
-    align-items: center;
-    gap: 6px;
+// Center column: auto-sized by label text only, so the grid keeps it truly centered.
+// The share button is absolutely positioned so it doesn't widen this column.
+.week-center {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1px;
+  cursor: pointer;
+  user-select: none;
+  -webkit-user-select: none;
+
+  &:active { opacity: 0.6; }
+
+  &--static {
+    cursor: default;
+    &:active { opacity: 1; }
   }
+}
 
-  .week-year {
-    font-family: 'Inter', sans-serif;
-    font-size: 0.8rem;
-    color: var(--ion-color-medium);
-    font-weight: 400;
-  }
+.week-number {
+  font-family: 'Inter', sans-serif;
+  font-size: 1.2rem;
+  font-weight: 600;
+  letter-spacing: 0.5px;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
 
-  .week-complete-tick {
+.week-year {
+  font-family: 'Inter', sans-serif;
+  font-size: 0.8rem;
+  color: var(--ion-color-medium);
+  font-weight: 400;
+}
+
+.week-complete-tick {
+  font-size: 1.5rem;
+  color: rgb(255, 255, 255);
+  display: block;
+}
+
+.week-action-group {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%);
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.week-icon-btn {
+  background: none;
+  border: none;
+  padding: 6px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+
+  ion-icon {
     font-size: 1.5rem;
-    color: rgb(255, 255, 255);
+    color: var(--ion-color-primary);
     display: block;
+  }
+
+  &:active ion-icon {
+    opacity: 0.65;
   }
 }

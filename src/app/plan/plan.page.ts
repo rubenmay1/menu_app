@@ -1,7 +1,8 @@
 import { Component, OnInit, OnDestroy, AfterViewInit, AfterViewChecked, ViewChild, ViewChildren, QueryList, ElementRef } from '@angular/core';
 import { IonContent, Platform } from '@ionic/angular';
+import { Share } from '@capacitor/share';
 import { Subscription } from 'rxjs';
-import { DayEntry, WeekState, MenuItem, ResolvedMenuItem, ExtraEntry } from './plan.models';
+import { DayEntry, WeekState, MenuItem, ResolvedMenuItem, ExtraEntry, SharedPlanData } from './plan.models';
 import { PlanService } from './plan.service';
 import { TagService } from '../tags/tag.service';
 import { Tag } from '../tags/tag.model';
@@ -9,6 +10,7 @@ import { EditorItem } from '../shared/item-editor.component';
 import { MealService } from '../meals/meal.service';
 import { Meal } from '../meals/meal.model';
 import { DbService } from '../shared/db.service';
+import { ViewPlanService } from '../shared/view-plan.service';
 import { getISOWeek, getISOWeekYear, getMondayOfISOWeek, formatShortDate } from '../shared/week-utils';
 import { WeekStateService } from '../shared/week-state.service';
 
@@ -53,6 +55,9 @@ export class PlanPage implements OnInit, OnDestroy, AfterViewInit, AfterViewChec
   extrasCustomName: string = '';
   extrasCustomStarred: boolean = false;
 
+  readMode = false;
+  clearWeekPromptVisible = false;
+
   slideDir: 'left' | 'right' | '' = '';
 
   private longPressTimers: Map<number, ReturnType<typeof setTimeout>> = new Map();
@@ -61,6 +66,7 @@ export class PlanPage implements OnInit, OnDestroy, AfterViewInit, AfterViewChec
   private lastWeekNavAt = 0;
   private slideTimer: ReturnType<typeof setTimeout> | null = null;
   private dataChangedSub!: Subscription;
+  private viewPlanSub!: Subscription;
   private backButtonSub: Subscription | null = null;
 
   constructor(
@@ -69,18 +75,31 @@ export class PlanPage implements OnInit, OnDestroy, AfterViewInit, AfterViewChec
     private readonly mealService: MealService,
     private readonly weekState: WeekStateService,
     private readonly db: DbService,
+    private readonly viewPlanService: ViewPlanService,
     private readonly platform: Platform,
   ) {}
 
   async ngOnInit(): Promise<void> {
     await this.loadWeek(this.weekState.year, this.weekState.isoWeek);
     this.dataChangedSub = this.db.dataChanged$.subscribe(() => {
-      this.loadWeek(this.weekState.year, this.weekState.isoWeek);
+      if (!this.readMode) void this.loadWeek(this.weekState.year, this.weekState.isoWeek);
+    });
+    this.viewPlanSub = this.viewPlanService.sharedPlan$.subscribe(data => {
+      if (data) {
+        this.readMode = true;
+        this.week = this.sharedToWeek(data);
+        this.extrasEntries = data.extras;
+        this.initTagVisibility();
+      } else {
+        this.readMode = false;
+        void this.loadWeek(this.weekState.year, this.weekState.isoWeek);
+      }
     });
   }
 
   ngOnDestroy(): void {
     this.dataChangedSub.unsubscribe();
+    this.viewPlanSub.unsubscribe();
   }
 
   ngAfterViewInit(): void {
@@ -118,17 +137,21 @@ export class PlanPage implements OnInit, OnDestroy, AfterViewInit, AfterViewChec
   }
 
   async ionViewWillEnter(): Promise<void> {
-    if (this.week &&
-        this.week.year === this.weekState.year &&
-        this.week.isoWeek === this.weekState.isoWeek) {
-      this.tags = await this.tagService.getTags();
-      this.week = { ...this.week, days: this.week.days.map(day => this.resolveDay(day)) };
-      this.initTagVisibility();
-    } else {
-      await this.loadWeek(this.weekState.year, this.weekState.isoWeek);
+    if (!this.readMode) {
+      if (this.week &&
+          this.week.year === this.weekState.year &&
+          this.week.isoWeek === this.weekState.isoWeek) {
+        this.tags = await this.tagService.getTags();
+        this.week = { ...this.week, days: this.week.days.map(day => this.resolveDay(day)) };
+        this.initTagVisibility();
+      } else {
+        await this.loadWeek(this.weekState.year, this.weekState.isoWeek);
+      }
     }
     this.backButtonSub = this.platform.backButton.subscribeWithPriority(10, (processNextHandler) => {
-      if (this.extrasPickerVisible) {
+      if (this.clearWeekPromptVisible) {
+        this.onClearWeekCancel();
+      } else if (this.extrasPickerVisible) {
         if (this.extrasPickerMode === 'custom') { this.extrasPickerMode = 'default'; }
         else { this.closeExtrasPicker(); }
       } else if (this.itemPopupVisible) {
@@ -206,7 +229,64 @@ export class PlanPage implements OnInit, OnDestroy, AfterViewInit, AfterViewChec
     }, { passive: true });
   }
 
+  openClearWeekPrompt(): void {
+    this.clearWeekPromptVisible = true;
+  }
+
+  onClearWeekCancel(): void {
+    this.clearWeekPromptVisible = false;
+  }
+
+  async onClearWeekConfirm(): Promise<void> {
+    this.clearWeekPromptVisible = false;
+    await this.planService.clearWeekMeals(this.week.year, this.week.isoWeek);
+  }
+
+  async shareWeek(): Promise<void> {
+    const data: SharedPlanData = {
+      year: this.week.year,
+      isoWeek: this.week.isoWeek,
+      days: this.week.days.map(d => ({
+        dayName: d.dayName,
+        displayDate: d.displayDate,
+        items: d.items.map(i => ({
+          id: i.id,
+          name: i.name,
+          mealName: i.mealName,
+          tags: i.resolvedTags.map(t => ({ name: t.name, color: t.color }))
+        }))
+      })),
+      extras: this.extrasEntries.map(e => ({ id: e.id, mealName: e.mealName }))
+    };
+    const b64 = btoa(encodeURIComponent(JSON.stringify(data)));
+    const url = `https://rubenmay1.github.io/menu_app/view-plan/?data=${encodeURIComponent(b64)}`;
+    try {
+      await Share.share({ title: 'My Meal Plan', text: url, dialogTitle: 'Share Meal Plan' });
+    } catch { /* user cancelled */ }
+  }
+
+  private sharedToWeek(data: SharedPlanData): WeekState {
+    return {
+      year: data.year,
+      isoWeek: data.isoWeek,
+      days: data.days.map((d, i) => ({
+        dayIndex: i,
+        dayName: d.dayName,
+        date: new Date(),
+        displayDate: d.displayDate,
+        items: d.items.map(item => ({
+          id: item.id,
+          name: item.name,
+          tagIds: [],
+          mealName: item.mealName,
+          resolvedTags: item.tags.map(t => ({ id: t.name, name: t.name, color: t.color }))
+        }))
+      }))
+    };
+  }
+
   async goToPreviousWeek(): Promise<void> {
+    if (this.readMode) return;
     const now = Date.now();
     if (now - this.lastWeekNavAt < 400) return;
     this.lastWeekNavAt = now;
@@ -220,6 +300,7 @@ export class PlanPage implements OnInit, OnDestroy, AfterViewInit, AfterViewChec
   }
 
   async goToNextWeek(): Promise<void> {
+    if (this.readMode) return;
     const now = Date.now();
     if (now - this.lastWeekNavAt < 400) return;
     this.lastWeekNavAt = now;
@@ -234,6 +315,7 @@ export class PlanPage implements OnInit, OnDestroy, AfterViewInit, AfterViewChec
   }
 
   async goToCurrentWeek(): Promise<void> {
+    if (this.readMode) return;
     const now = Date.now();
     if (now - this.lastWeekNavAt < 400) return;
     const today = new Date();
@@ -324,6 +406,7 @@ export class PlanPage implements OnInit, OnDestroy, AfterViewInit, AfterViewChec
   }
 
   onItemClick(item: ResolvedMenuItem, dayIndex: number): void {
+    if (this.readMode) return;
     if (this.itemLongPressActive) {
       this.itemLongPressActive = false;
       return;
@@ -332,6 +415,7 @@ export class PlanPage implements OnInit, OnDestroy, AfterViewInit, AfterViewChec
   }
 
   openDayEditor(dayIndex: number): void {
+    if (this.readMode) return;
     this.dayEditorIndex = dayIndex;
     this.dayEditorVisible = true;
   }

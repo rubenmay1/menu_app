@@ -1,0 +1,18 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Opening Menu…</title>
+  <script>
+    const data = new URLSearchParams(window.location.search).get('data');
+    if (data) {
+      window.location.replace('menu-app://import?data=' + encodeURIComponent(data));
+    }
+  </script>
+</head>
+<body style="font-family:sans-serif;text-align:center;padding:60px 24px;color:#888">
+  <p style="font-size:1.1rem;color:#333">Opening Menu app…</p>
+  <p style="font-size:0.85rem">If nothing happens, make sure the Menu app is installed.</p>
+</body>
+</html>

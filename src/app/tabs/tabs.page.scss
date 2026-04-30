@@ -1,0 +1,35 @@
+.tab-bar--hidden {
+  display: none;
+}
+
+.read-mode-bar {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  background: var(--ion-color-primary);
+  z-index: 999;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 0 16px;
+  min-height: 56px;
+  padding-bottom: env(safe-area-inset-bottom, 0px);
+  cursor: pointer;
+  user-select: none;
+  -webkit-user-select: none;
+
+  span {
+    font-family: 'Inter', sans-serif;
+    font-size: 0.85rem;
+    font-weight: 500;
+    color: #fff;
+  }
+
+  ion-icon {
+    color: #fff;
+    font-size: 1.2rem;
+    flex-shrink: 0;
+  }
+}

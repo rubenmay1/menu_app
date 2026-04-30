@@ -129,7 +129,7 @@ export class SettingsPage implements OnDestroy {
     const data = this.db.exportTagsAndMeals();
     const json = JSON.stringify(data);
     const b64 = btoa(encodeURIComponent(json));
-    const url = `menu-app://import?data=${encodeURIComponent(b64)}`;
+    const url = `https://rubenmay1.github.io/menu_app/import/?data=${encodeURIComponent(b64)}`;
     try {
       await Share.share({
         title: 'Menu Tags & Meals',

@@ -1,5 +1,5 @@
 <ion-tabs>
-  <ion-tab-bar slot="bottom">
+  <ion-tab-bar slot="bottom" [class.tab-bar--hidden]="isReadMode">
 
     <ion-tab-button tab="plan">
       <ion-icon name="calendar-outline"></ion-icon>
@@ -28,3 +28,8 @@
 
   </ion-tab-bar>
 </ion-tabs>
+
+<div class="read-mode-bar" *ngIf="isReadMode" (click)="exitReadMode()">
+  <ion-icon name="eye-outline"></ion-icon>
+  <span>Viewing plan in read mode — tap to exit</span>
+</div>

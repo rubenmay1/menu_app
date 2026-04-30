@@ -162,6 +162,14 @@ export class DbService {
     this.dataChangedSubject.next();
   }
 
+  async clearWeekMeals(year: number, week: number): Promise<void> {
+    for (let i = 0; i < 7; i++) {
+      localStorage.removeItem(`week-meals-${year}-${week}-${i}`);
+    }
+    localStorage.removeItem(`week-extras-${year}-${week}`);
+    this.dataChangedSubject.next();
+  }
+
   // ---- Extras ----
 
   async getExtras(year: number, week: number): Promise<ExtraEntry[]> {

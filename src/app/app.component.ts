@@ -1,11 +1,14 @@
 import { Component, NgZone, OnInit } from '@angular/core';
+import { Router } from '@angular/router';
 import { App } from '@capacitor/app';
 import { Capacitor } from '@capacitor/core';
 import { AlertController, Platform } from '@ionic/angular';
 import { Tag } from './tags/tag.model';
 import { Meal } from './meals/meal.model';
+import { SharedPlanData } from './plan/plan.models';
 import { DbService } from './shared/db.service';
 import { DropboxService } from './shared/dropbox.service';
+import { ViewPlanService } from './shared/view-plan.service';
 
 interface TutorialStep {
   readonly selector: string;
@@ -53,6 +56,8 @@ export class AppComponent implements OnInit {
     private alertCtrl: AlertController,
     private ngZone: NgZone,
     private platform: Platform,
+    private router: Router,
+    private viewPlan: ViewPlanService,
   ) {}
 
   async ngOnInit(): Promise<void> {
@@ -101,6 +106,8 @@ export class AppComponent implements OnInit {
           }
         } else if (data.url.startsWith('menu-app://import')) {
           this.handleImportUrl(data.url);
+        } else if (data.url.startsWith('menu-app://view-plan')) {
+          this.handleViewPlanUrl(data.url);
         }
       });
     });
@@ -221,6 +228,23 @@ export class AppComponent implements OnInit {
   onImportCancel(): void {
     this.importPromptVisible = false;
     this.pendingImportData = null;
+  }
+
+  // ---- View plan (read mode) ----
+
+  private handleViewPlanUrl(url: string): void {
+    try {
+      const params = new URL(url).searchParams;
+      const encoded = params.get('data');
+      if (!encoded) return;
+      const json = decodeURIComponent(atob(decodeURIComponent(encoded)));
+      const data = JSON.parse(json) as SharedPlanData;
+      if (!Array.isArray(data.days)) return;
+      this.viewPlan.enter(data);
+      void this.router.navigate(['/tabs/plan']);
+    } catch {
+      // malformed URL — ignore
+    }
   }
 
   private runBackgroundConnect(): void {

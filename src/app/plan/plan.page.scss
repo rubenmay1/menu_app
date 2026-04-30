@@ -17,6 +17,13 @@
 
   &.slide-from-right { animation: slideFromRight 0.25s ease-out; }
   &.slide-from-left  { animation: slideFromLeft  0.25s ease-out; }
+
+  &--read-mode {
+    .day-header, .menu-item {
+      cursor: default;
+      pointer-events: none;
+    }
+  }
 }
 
 .day-card {

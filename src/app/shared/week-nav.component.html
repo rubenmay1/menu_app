@@ -1,15 +1,31 @@
 <div class="week-header">
-  <ion-button fill="clear" (click)="previousWeek.emit()">
-    <ion-icon slot="icon-only" name="chevron-back-outline"></ion-icon>
-  </ion-button>
-  <div class="week-label" (click)="currentWeek.emit()">
+
+  <div class="week-side week-side--left">
+    <ion-button fill="clear" *ngIf="showArrows" (click)="previousWeek.emit()">
+      <ion-icon slot="icon-only" name="chevron-back-outline"></ion-icon>
+    </ion-button>
+  </div>
+
+  <div class="week-center" [class.week-center--static]="!showArrows" (click)="currentWeek.emit()">
     <span class="week-number">
       Week {{ isoWeek }}
       <ion-icon *ngIf="isComplete" name="checkmark-done-outline" class="week-complete-tick"></ion-icon>
     </span>
     <span class="week-year">{{ year }}</span>
   </div>
-  <ion-button fill="clear" (click)="nextWeek.emit()">
-    <ion-icon slot="icon-only" name="chevron-forward-outline"></ion-icon>
-  </ion-button>
+
+  <div class="week-side week-side--right">
+    <div *ngIf="showShare || showClear" class="week-action-group">
+      <button *ngIf="showShare" class="week-icon-btn" (click)="share.emit()">
+        <ion-icon name="share-social-outline"></ion-icon>
+      </button>
+      <button *ngIf="showClear" class="week-icon-btn" (click)="clearWeek.emit()">
+        <ion-icon name="trash-outline"></ion-icon>
+      </button>
+    </div>
+    <ion-button fill="clear" *ngIf="showArrows" (click)="nextWeek.emit()">
+      <ion-icon slot="icon-only" name="chevron-forward-outline"></ion-icon>
+    </ion-button>
+  </div>
+
 </div>

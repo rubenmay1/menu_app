@@ -26,6 +26,7 @@ export class PlanService {
     });
   }
 
+  clearWeekMeals(year: number, week: number): Promise<void> { return this.db.clearWeekMeals(year, week); }
   getExtras(year: number, week: number): Promise<ExtraEntry[]> { return this.db.getExtras(year, week); }
   setExtras(year: number, week: number, entries: ExtraEntry[]): Promise<void> { return this.db.setExtras(year, week, entries); }
 
