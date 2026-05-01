@@ -1,9 +1,3 @@
-ion-searchbar {
-  --background: var(--surface-1);
-  --border-radius: 10px;
-  padding: 16px 16px 10px;
-}
-
 .tag-list {
   display: flex;
   flex-direction: column;
@@ -20,57 +14,6 @@ ion-searchbar {
   user-select: none;
   -webkit-user-select: none;
   cursor: pointer;
-}
-
-.empty-state {
-  font-family: 'Inter', sans-serif;
-  font-size: 0.9rem;
-  color: var(--ion-color-medium);
-  text-align: center;
-  padding: 48px 24px 0;
-  margin: 0;
-}
-
-.backdrop {
-  position: fixed;
-  inset: 0;
-  background: rgba(0, 0, 0, 0.5);
-  z-index: 1000;
-  display: flex;
-  align-items: flex-end;
-  justify-content: center;
-}
-
-.bottom-panel {
-  background: var(--surface-2);
-  border-radius: 28px 28px 0 0;
-  padding: 20px 16px 32px;
-  width: 100%;
-  max-width: 480px;
-}
-
-.panel-title {
-  font-family: 'Inter', sans-serif;
-  font-size: 1.1rem;
-  font-weight: 600;
-  text-align: center;
-  margin: 0 0 14px;
-}
-
-.name-input {
-  width: 100%;
-  box-sizing: border-box;
-  font-family: 'Inter', sans-serif;
-  font-size: 0.9rem;
-  padding: 10px 12px;
-  border: 1px solid rgba(255, 255, 255, 0.15);
-  border-radius: 8px;
-  background: var(--surface-3);
-  color: var(--ion-text-color, #fff);
-  margin-bottom: 12px;
-
-  &::placeholder { color: var(--ion-color-medium, #999); }
-  &:focus { outline: none; border-color: var(--ion-color-primary); }
 }
 
 .preview-row {

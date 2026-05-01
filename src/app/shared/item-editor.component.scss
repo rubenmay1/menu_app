@@ -69,46 +69,9 @@
   &:focus { outline: none; border-color: var(--ion-color-primary); }
 }
 
-.no-tags-hint {
-  font-family: 'Inter', sans-serif;
-  font-size: 0.8rem;
-  color: var(--ion-color-medium, #92949c);
-  margin: 0 0 16px;
-}
-
-.tag-selector {
-  display: flex;
-  flex-wrap: wrap;
-  justify-content: center;
-  gap: 6px;
-  margin-bottom: 16px;
-}
-
 .edit-actions {
   display: flex;
   flex-direction: column;
   gap: 10px;
 }
 
-.tag-sel-pill {
-  display: inline-flex;
-  align-items: center;
-  gap: 4px;
-  padding: 4px 12px;
-  border-radius: 999px;
-  border: 1.5px solid transparent;
-  background: transparent;
-  font-family: 'Inter', sans-serif;
-  font-size: 0.78rem;
-  font-weight: 400;
-  cursor: pointer;
-
-  &--selected {
-    border-color: transparent;
-
-    .pill-check {
-      font-size: 0.85rem;
-      flex-shrink: 0;
-    }
-  }
-}

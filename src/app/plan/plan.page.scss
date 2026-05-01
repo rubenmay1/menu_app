@@ -98,43 +98,6 @@
   flex-shrink: 0;
 }
 
-.tag-overflow-badge {
-  font-family: 'Inter', sans-serif;
-  font-size: 0.72rem;
-  font-weight: 600;
-  color: var(--ion-color-medium);
-  flex-shrink: 0;
-}
-
-
-// .item-name {
-//   font-family: 'Inter', sans-serif;
-//   font-size: 0.9rem;
-//   flex-shrink: 0;
-//   white-space: nowrap;
-
-//   &--two-lines {
-//     white-space: normal;
-//   }
-// }
-
-// .item-meal-name {
-//   font-family: 'Inter', sans-serif;
-//   font-size: 0.85rem;
-//   color: var(--ion-color-medium);
-//   flex: 1;
-//   min-width: 0;
-//   margin-left: 8px;
-//   overflow: hidden;
-//   display: -webkit-box;
-//   -webkit-line-clamp: 1;
-//   -webkit-box-orient: vertical;
-
-//   &--two-lines {
-//     -webkit-line-clamp: 2;
-//   }
-// }
-
 .item-name {
   font-family: 'Inter', sans-serif;
   font-size: 0.85rem;
@@ -161,34 +124,6 @@
   &--two-lines {
     -webkit-line-clamp: 2;
   }
-}
-
-.backdrop {
-  position: fixed;
-  inset: 0;
-  background: rgba(0, 0, 0, 0.5);
-  z-index: 1000;
-  display: flex;
-  align-items: flex-end;
-  justify-content: center;
-}
-
-.bottom-panel {
-  background: var(--surface-2);
-  border-radius: 28px 28px 0 0;
-  padding: 20px 16px 32px;
-  width: 100%;
-  max-width: 480px;
-  max-height: 80vh;
-  overflow-y: auto;
-}
-
-.panel-title {
-  font-family: 'Inter', sans-serif;
-  font-size: 1.1rem;
-  font-weight: 600;
-  text-align: center;
-  margin: 0 0 16px;
 }
 
 // Star icon on plan item rows

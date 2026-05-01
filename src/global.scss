@@ -142,6 +142,111 @@ body {
   gap: 10px;
 }
 
+ion-searchbar {
+  --background: var(--surface-1);
+  --border-radius: 10px;
+  padding: 16px 16px 10px;
+}
+
+.empty-state {
+  font-family: 'Inter', sans-serif;
+  font-size: 0.9rem;
+  color: var(--ion-color-medium);
+  text-align: center;
+  padding: 48px 24px 0;
+  margin: 0;
+}
+
+.tag-overflow-badge {
+  font-family: 'Inter', sans-serif;
+  font-size: 0.72rem;
+  font-weight: 600;
+  color: var(--ion-color-medium);
+  flex-shrink: 0;
+}
+
+.backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.5);
+  z-index: 1000;
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+}
+
+.bottom-panel {
+  background: var(--surface-2);
+  border-radius: 28px 28px 0 0;
+  padding: 20px 16px 32px;
+  width: 100%;
+  max-width: 480px;
+  max-height: 80vh;
+  overflow-y: auto;
+}
+
+.panel-title {
+  font-family: 'Inter', sans-serif;
+  font-size: 1.1rem;
+  font-weight: 600;
+  text-align: center;
+  margin: 0 0 16px;
+}
+
+.text-input {
+  width: 100%;
+  box-sizing: border-box;
+  font-family: 'Inter', sans-serif;
+  font-size: 0.9rem;
+  padding: 10px 12px;
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  border-radius: 8px;
+  background: var(--surface-3);
+  color: var(--ion-text-color, #fff);
+  margin-bottom: 12px;
+
+  &::placeholder { color: var(--ion-color-medium, #999); }
+  &:focus { outline: none; border-color: var(--ion-color-primary); }
+}
+
+.tag-selector {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 6px;
+  margin-bottom: 16px;
+}
+
+.no-tags-hint {
+  font-family: 'Inter', sans-serif;
+  font-size: 0.8rem;
+  color: var(--ion-color-medium, #92949c);
+  margin: 0 0 16px;
+}
+
+.tag-sel-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 12px;
+  border-radius: 999px;
+  border: 1.5px solid transparent;
+  background: transparent;
+  font-family: 'Inter', sans-serif;
+  font-size: 0.78rem;
+  font-weight: 400;
+  cursor: pointer;
+
+  &--selected {
+    border-color: transparent;
+
+    .pill-check {
+      font-size: 0.85rem;
+      flex-shrink: 0;
+    }
+  }
+}
+
 ion-button.btn-delete {
   --background: transparent;
   --background-hover: rgba(255, 180, 171, 0.1);
