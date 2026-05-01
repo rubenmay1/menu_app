@@ -1,4 +1,4 @@
-import { Component, OnDestroy, OnInit } from '@angular/core';
+import { Component, OnDestroy, OnInit, AfterViewChecked, ViewChildren, QueryList, ElementRef } from '@angular/core';
 import { Platform } from '@ionic/angular';
 import { Browser } from '@capacitor/browser';
 import { Subscription } from 'rxjs';
@@ -7,14 +7,18 @@ import { TagService } from '../tags/tag.service';
 import { DbService } from '../shared/db.service';
 import { Meal, Ingredient } from './meal.model';
 import { Tag } from '../tags/tag.model';
+import { ComponentOverflowService } from '../shared/component-overflow.service';
 
 @Component({
   selector: 'app-meals',
   standalone: false,
   templateUrl: './meals.page.html',
-  styleUrls: ['./meals.page.scss']
+  styleUrls: ['./meals.page.scss'],
+  providers: [ComponentOverflowService]
 })
-export class MealsPage implements OnInit, OnDestroy {
+export class MealsPage implements OnInit, OnDestroy, AfterViewChecked {
+
+  @ViewChildren('mealNameEl') private mealNameEls!: QueryList<ElementRef>;
 
   meals: Meal[] = [];
   filteredMeals: Meal[] = [];
@@ -47,7 +51,14 @@ export class MealsPage implements OnInit, OnDestroy {
     private readonly tagService: TagService,
     private readonly db: DbService,
     private readonly platform: Platform,
-  ) {}
+    readonly overflowSvc: ComponentOverflowService,
+  ) {
+    overflowSvc.configure(4, [
+      { fromStage: 4, maxChips: 0 },
+      { fromStage: 3, maxChips: 1 },
+      { fromStage: 2, maxChips: 2 },
+    ]);
+  }
 
   ngOnInit(): void {
     this.dataChangedSub = this.db.dataChanged$.subscribe(() => {
@@ -57,6 +68,10 @@ export class MealsPage implements OnInit, OnDestroy {
 
   ngOnDestroy(): void {
     this.dataChangedSub.unsubscribe();
+  }
+
+  ngAfterViewChecked(): void {
+    this.overflowSvc.afterViewChecked(this.mealNameEls);
   }
 
   async ionViewWillEnter(): Promise<void> {
@@ -113,6 +128,7 @@ export class MealsPage implements OnInit, OnDestroy {
       source = source.filter(m => m.tagIds.some(id => this.filterTagIds.includes(id)));
     }
     this.filteredMeals = source.sort((a, b) => a.name.localeCompare(b.name));
+    this.overflowSvc.init(this.filteredMeals.map(m => m.id));
   }
 
   // ---- Long-press / tap handling on meal rows ----

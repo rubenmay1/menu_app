@@ -55,6 +55,20 @@ ion-searchbar {
   font-family: 'Inter', sans-serif;
   font-size: 0.9rem;
   flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  display: -webkit-box;
+  -webkit-line-clamp: 1;
+  -webkit-box-orient: vertical;
+  white-space: normal;
+}
+
+.tag-overflow-badge {
+  font-family: 'Inter', sans-serif;
+  font-size: 0.72rem;
+  font-weight: 600;
+  color: var(--ion-color-medium);
+  flex-shrink: 0;
 }
 
 .ingredient-icon {

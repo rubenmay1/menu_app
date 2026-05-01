@@ -16,6 +16,7 @@ import { ViewPlanService } from '../shared/view-plan.service';
 import { PreferenceService } from '../shared/preference.service';
 import { getISOWeek, getISOWeekYear, getMondayOfISOWeek, formatShortDate } from '../shared/week-utils';
 import { WeekStateService } from '../shared/week-state.service';
+import { ComponentOverflowService } from '../shared/component-overflow.service';
 
 const DAY_NAMES: string[] = [
   'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'
@@ -25,16 +26,16 @@ const DAY_NAMES: string[] = [
   selector: 'app-plan',
   standalone: false,
   templateUrl: './plan.page.html',
-  styleUrls: ['./plan.page.scss']
+  styleUrls: ['./plan.page.scss'],
+  providers: [ComponentOverflowService]
 })
 export class PlanPage implements OnInit, OnDestroy, AfterViewInit, AfterViewChecked {
 
   @ViewChild(IonContent, { read: ElementRef }) private contentRef!: ElementRef;
   @ViewChildren('mealNameEl') private mealNameEls!: QueryList<ElementRef>;
+  @ViewChildren('pickerMealEl') private pickerMealEls!: QueryList<ElementRef>;
 
-  readonly itemStage: Map<string, number> = new Map();
-  private tagVisibilityCheckPending = false;
-  private tagVisibilityCheckScheduled = false;
+  readonly pickerOverflowSvc = new ComponentOverflowService();
 
   week!: WeekState;
   tags: Tag[] = [];
@@ -50,6 +51,8 @@ export class PlanPage implements OnInit, OnDestroy, AfterViewInit, AfterViewChec
   customStarred: boolean = false;
   pickerMeals: Meal[] = [];
   pickerTags: Tag[] = [];
+  pickerFilterActive = true;
+  private allPickerMeals: Meal[] = [];
   mealUsageCounts: Map<string, number> = new Map();
   mealLastUsedDates: Map<string, Date> = new Map();
   snowTooltipText: string | null = null;
@@ -87,7 +90,19 @@ export class PlanPage implements OnInit, OnDestroy, AfterViewInit, AfterViewChec
     private readonly prefs: PreferenceService,
     private readonly platform: Platform,
     private readonly router: Router,
-  ) {}
+    readonly overflowSvc: ComponentOverflowService,
+  ) {
+    overflowSvc.configure(6, [
+      { fromStage: 6, maxChips: 0 },
+      { fromStage: 5, maxChips: 1 },
+      { fromStage: 2, maxChips: 2 },
+    ]);
+    this.pickerOverflowSvc.configure(4, [
+      { fromStage: 4, maxChips: 0 },
+      { fromStage: 3, maxChips: 1 },
+      { fromStage: 2, maxChips: 2 },
+    ]);
+  }
 
   async ngOnInit(): Promise<void> {
     await this.loadWeek(this.weekState.year, this.weekState.isoWeek);
@@ -117,44 +132,13 @@ export class PlanPage implements OnInit, OnDestroy, AfterViewInit, AfterViewChec
   }
 
   ngAfterViewChecked(): void {
-    if (!this.tagVisibilityCheckPending || this.tagVisibilityCheckScheduled) return;
-    this.tagVisibilityCheckScheduled = true;
-    setTimeout(() => {
-      this.tagVisibilityCheckScheduled = false;
-      let changed = false;
-      for (const elRef of this.mealNameEls ?? []) {
-        const el = elRef.nativeElement as HTMLElement;
-        const itemId = el.getAttribute('data-item-id') ?? '';
-        if (el.scrollHeight > el.clientHeight + 1) {
-          const stage = this.itemStage.get(itemId);
-          if (stage === undefined || stage >= 6) continue;
-          this.itemStage.set(itemId, stage + 1);
-          changed = true;
-        }
-      }
-      if (!changed) this.tagVisibilityCheckPending = false;
-    }, 0);
+    this.overflowSvc.afterViewChecked(this.mealNameEls);
+    this.pickerOverflowSvc.afterViewChecked(this.pickerMealEls);
   }
 
   private initItemStages(): void {
-    for (const day of this.week?.days ?? []) {
-      for (const item of day.items) {
-        this.itemStage.set(item.id, 1);
-      }
-    }
-    this.tagVisibilityCheckPending = true;
-  }
-
-  getVisibleChipCount(itemId: string, total: number): number {
-    const stage = this.itemStage.get(itemId) ?? 1;
-    if (stage >= 6) return 0;
-    if (stage >= 5) return Math.min(1, total);
-    if (stage >= 2) return Math.min(2, total);
-    return total;
-  }
-
-  getOverflowCount(itemId: string, total: number): number {
-    return Math.max(0, total - this.getVisibleChipCount(itemId, total));
+    const ids = (this.week?.days ?? []).reduce<string[]>((acc, d) => acc.concat(d.items.map(it => it.id)), []);
+    this.overflowSvc.init(ids);
   }
 
   async ionViewWillEnter(): Promise<void> {
@@ -528,19 +512,22 @@ export class PlanPage implements OnInit, OnDestroy, AfterViewInit, AfterViewChec
     ]);
     this.mealUsageCounts = usageCounts;
     this.mealLastUsedDates = lastUsed;
-    if (item.tagIds.length > 0) {
-      this.pickerMeals = meals.filter(m => m.tagIds.length === 0 || m.tagIds.some(tid => item.tagIds.includes(tid)));
-      this.pickerTags = [...item.resolvedTags].sort((a, b) => a.name.localeCompare(b.name));
-    } else {
-      this.pickerMeals = meals;
-      this.pickerTags = [];
-    }
-    this.pickerMeals.sort((a, b) => {
+    const sorted = meals.sort((a, b) => {
       const ua = this.mealUsageCounts.get(a.name) ?? 0;
       const ub = this.mealUsageCounts.get(b.name) ?? 0;
       if (ub !== ua) return ub - ua;
       return a.name.localeCompare(b.name);
     });
+    this.allPickerMeals = sorted;
+    this.pickerFilterActive = true;
+    if (item.tagIds.length > 0) {
+      this.pickerMeals = sorted.filter(m => m.tagIds.length === 0 || m.tagIds.some(tid => item.tagIds.includes(tid)));
+      this.pickerTags = [...item.resolvedTags].sort((a, b) => a.name.localeCompare(b.name));
+    } else {
+      this.pickerMeals = sorted;
+      this.pickerTags = [];
+    }
+    this.pickerOverflowSvc.init(this.pickerMeals.map(m => m.id));
     this.itemPopupVisible = true;
   }
 
@@ -551,6 +538,19 @@ export class PlanPage implements OnInit, OnDestroy, AfterViewInit, AfterViewChec
     this.snowTooltipText = null;
     this.snowTooltipTop = null;
     this.snowTooltipFading = false;
+  }
+
+  togglePickerFilter(): void {
+    this.pickerFilterActive = !this.pickerFilterActive;
+    const item = this.itemPopupItem;
+    if (this.pickerFilterActive && item && item.tagIds.length > 0) {
+      this.pickerMeals = this.allPickerMeals.filter(m =>
+        m.tagIds.length === 0 || m.tagIds.some(tid => item.tagIds.includes(tid))
+      );
+    } else {
+      this.pickerMeals = this.allPickerMeals;
+    }
+    this.pickerOverflowSvc.init(this.pickerMeals.map(m => m.id));
   }
 
   async setNone(): Promise<void> {

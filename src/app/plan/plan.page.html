@@ -51,25 +51,25 @@
           (click)="onItemClick(item, i)"
         >
           <span class="item-name"
-                [class.item-name--two-lines]="(itemStage.get(item.id) ?? 1) >= 4"
+                [class.item-name--two-lines]="overflowSvc.getStage(item.id) >= 4"
           >{{ item.name || '-' }}</span>
           <span class="item-meal-name"
                 *ngIf="item.mealName"
                 #mealNameEl
                 [attr.data-item-id]="item.id"
-                [class.item-meal-name--two-lines]="!item.resolvedTags?.length || (itemStage.get(item.id) ?? 1) >= 3"
+                [class.item-meal-name--two-lines]="!item.resolvedTags.length || overflowSvc.getStage(item.id) >= 3"
           >{{ item.mealName }}</span>
           <div class="item-tags" *ngIf="item.resolvedTags?.length">
             <ng-container *ngFor="let t of item.resolvedTags; let ti = index">
               <app-tag-pill
-                *ngIf="ti < getVisibleChipCount(item.id, item.resolvedTags.length)"
-                [name]="(itemStage.get(item.id) ?? 1) >= 2 ? t.name.charAt(0) : t.name"
+                *ngIf="ti < overflowSvc.getVisibleChipCount(item.id, item.resolvedTags.length)"
+                [name]="overflowSvc.getStage(item.id) >= 2 ? t.name.charAt(0) : t.name"
                 [color]="t.color">
               </app-tag-pill>
             </ng-container>
             <span class="tag-overflow-badge"
-                  *ngIf="getOverflowCount(item.id, item.resolvedTags.length) > 0">
-              +{{ getOverflowCount(item.id, item.resolvedTags.length) }}
+                  *ngIf="overflowSvc.getOverflowCount(item.id, item.resolvedTags.length) > 0">
+              +{{ overflowSvc.getOverflowCount(item.id, item.resolvedTags.length) }}
             </span>
           </div>
         </div>
@@ -140,9 +140,6 @@
     </div>
   </div>
 
-
-</ion-content>
-
 <!-- Item picker popup (tap) -->
 <div class="picker-backdrop" *ngIf="itemPopupVisible" (click)="closeItemPopup()">
   <div class="picker-popup" (click)="$event.stopPropagation()">
@@ -163,18 +160,39 @@
         <div class="picker-meals-section">
           <div class="picker-meals-header">
             <p class="picker-section-label">From Meals</p>
-            <ng-container *ngIf="tags?.length">
-              <app-tag-pill *ngFor="let t of pickerTags" [name]="t.name" [color]="t.color" size="sm"></app-tag-pill>
-            </ng-container>
+            <div class="picker-header-right" *ngIf="pickerTags.length > 0">
+              <ng-container *ngIf="pickerFilterActive">
+                <app-tag-pill *ngFor="let t of pickerTags" [name]="t.name.charAt(0)" [color]="t.color" size="sm"></app-tag-pill>
+              </ng-container>
+              <button class="picker-filter-btn" (click)="togglePickerFilter(); $event.stopPropagation()">
+                <ion-icon
+                  [name]="pickerFilterActive ? 'filter-outline' : 'filter-outline'"
+                  [style.color]="pickerFilterActive ? 'var(--ion-color-primary)' : 'rgba(255,255,255,0.7)'">
+                </ion-icon>
+              </button>
+            </div>
           </div>
 
           <ng-container *ngIf="pickerMeals.length > 0; else noMeals">
             <div class="picker-meal-row" *ngFor="let meal of pickerMeals" (click)="selectMeal(meal)">
-              <span class="picker-meal-name">{{ meal.name }}</span>
+              <span class="picker-meal-name" #pickerMealEl [attr.data-item-id]="meal.id">{{ meal.name }}</span>
               <ng-container *ngIf="getMatchingTags(meal) as matchTags">
-                <div class="picker-meal-match-tags" *ngIf="matchTags.length > 0">
-                  <app-tag-pill *ngFor="let t of matchTags" [name]="t.name" [color]="t.color" size="sm"></app-tag-pill>
-                </div>
+                <ng-container *ngIf="pickerOverflowSvc.getVisibleChipCount(meal.id, matchTags.length) > 0">
+                  <div class="picker-meal-match-tags">
+                    <ng-container *ngFor="let t of matchTags; let ti = index">
+                      <app-tag-pill
+                        *ngIf="ti < pickerOverflowSvc.getVisibleChipCount(meal.id, matchTags.length)"
+                        [name]="pickerOverflowSvc.getStage(meal.id) >= 2 ? t.name.charAt(0) : t.name"
+                        [color]="t.color"
+                        size="sm">
+                      </app-tag-pill>
+                    </ng-container>
+                  </div>
+                </ng-container>
+                <span class="tag-overflow-badge"
+                      *ngIf="pickerOverflowSvc.getOverflowCount(meal.id, matchTags.length) > 0">
+                  +{{ pickerOverflowSvc.getOverflowCount(meal.id, matchTags.length) }}
+                </span>
               </ng-container>
               <ng-container *ngIf="mealUsageCounts.get(meal.name) as count">
                 <ion-icon name="flame-outline" class="picker-flame-icon"></ion-icon>
@@ -243,6 +261,10 @@
 
   </div>
 </div>
+
+</ion-content>
+
+
 
 <!-- Extras picker popup -->
 <div class="picker-backdrop" *ngIf="extrasPickerVisible" (click)="closeExtrasPicker()">

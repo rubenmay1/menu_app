@@ -33,12 +33,22 @@
         (contextmenu)="$event.preventDefault()"
         (click)="onMealClick(meal)"
       >
-        <span class="meal-name">{{ meal.name }}</span>
-        <ng-container *ngFor="let tagId of meal.tagIds">
-          <ng-container *ngIf="getTag(tagId) as tag">
-            <app-tag-pill [name]="tag.name" [color]="tag.color" size="sm"></app-tag-pill>
+        <span class="meal-name" #mealNameEl [attr.data-item-id]="meal.id">{{ meal.name }}</span>
+        <ng-container *ngFor="let tagId of meal.tagIds; let ti = index">
+          <ng-container *ngIf="ti < overflowSvc.getVisibleChipCount(meal.id, meal.tagIds.length)">
+            <ng-container *ngIf="getTag(tagId) as tag">
+              <app-tag-pill
+                [name]="overflowSvc.getStage(meal.id) >= 2 ? tag.name.charAt(0) : tag.name"
+                [color]="tag.color"
+                size="sm">
+              </app-tag-pill>
+            </ng-container>
           </ng-container>
         </ng-container>
+        <span class="tag-overflow-badge"
+              *ngIf="overflowSvc.getOverflowCount(meal.id, meal.tagIds.length) > 0">
+          +{{ overflowSvc.getOverflowCount(meal.id, meal.tagIds.length) }}
+        </span>
         <ion-icon name="link-outline" class="recipe-icon" *ngIf="meal.recipeUrl"></ion-icon>
         <ion-icon name="list-outline" class="ingredient-icon" *ngIf="meal.ingredients.length > 0"></ion-icon>
         <ng-container *ngIf="mealUsageCounts.get(meal.name) as count">
