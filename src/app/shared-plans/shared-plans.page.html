@@ -36,7 +36,7 @@
 <div class="delete-dialog" *ngIf="deleteTargetGuid !== null">
   <p class="delete-message">Remove this plan from your history?</p>
   <div class="delete-actions">
-    <ion-button fill="clear" class="btn-cancel" (click)="cancelDelete()">Cancel</ion-button>
+    <ion-button expand="block" fill="clear" (click)="cancelDelete()">Cancel</ion-button>
     <ion-button fill="outline" class="btn-delete" (click)="confirmDelete()">
       <ion-icon slot="start" name="trash-outline"></ion-icon>
       Delete

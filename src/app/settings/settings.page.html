@@ -154,7 +154,7 @@
         <ion-icon slot="start" name="trash-outline"></ion-icon>
         Reset
       </ion-button>
-      <ion-button expand="block" (click)="onResetCancel()">Cancel</ion-button>
+      <ion-button expand="block" fill="clear" (click)="onResetCancel()">Cancel</ion-button>
     </div>
   </div>
 </div>
@@ -167,7 +167,7 @@
     <p class="sync-popup-title">Are you really sure?</p>
     <p class="sync-popup-message">This cannot be undone.</p>
     <div class="sync-popup-actions">
-      <ion-button expand="block" (click)="onResetCancel()">Cancel</ion-button>
+      <ion-button expand="block" fill="clear" (click)="onResetCancel()">Cancel</ion-button>
       <ion-button expand="block" class="btn-delete" fill="outline" (click)="onResetConfirm()">
         <ion-icon slot="start" name="trash-outline"></ion-icon>
         Reset

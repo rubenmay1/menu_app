@@ -77,8 +77,7 @@
       <div class="sync-popup-icon">
         <ion-icon name="share-social-outline"></ion-icon>
       </div>
-      <p class="sync-popup-title">Import Meal?</p>
-      <p class="sync-popup-message">{{ mealImportPromptMessage }}</p>
+      <p class="sync-popup-title">{{ mealImportPromptMessage }}</p>
       <div class="sync-popup-actions">
         <ion-button expand="block" (click)="onMealImportConfirm()" [disabled]="mealImportLoading">
           <ion-spinner *ngIf="mealImportLoading" slot="start" name="crescent"></ion-spinner>
