@@ -100,6 +100,7 @@ export class ShoppingPage implements OnDestroy, AfterViewInit {
         if (!menuItem.mealName || menuItem.mealName === '--' || menuItem.mealName === '' || menuItem.mealName === 'None') continue;
         const meal = mealByName.get(menuItem.mealName.toLowerCase());
         if (!meal || meal.ingredients.length === 0) {
+          if (meal?.noIngredientsRequired) continue;
           const key = `no-ingredients-${menuItem.id}`;
           allItems.push({
             key,
@@ -126,6 +127,7 @@ export class ShoppingPage implements OnDestroy, AfterViewInit {
       if (!entry.mealName) continue;
       const meal = mealByName.get(entry.mealName.toLowerCase());
       if (!meal || meal.ingredients.length === 0) {
+        if (meal?.noIngredientsRequired) continue;
         const key = `no-ingredients-extra-${entry.id}`;
         allItems.push({ key, ingredientName: `Ingredients for ${entry.mealName}`, mealName: entry.mealName, done: doneKeys.has(key) });
         continue;

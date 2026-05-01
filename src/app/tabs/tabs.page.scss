@@ -1,5 +1,6 @@
 .tab-bar--hidden {
-  display: none;
+  visibility: hidden;
+  pointer-events: none;
 }
 
 .read-mode-bar {
@@ -13,9 +14,8 @@
   align-items: center;
   justify-content: center;
   gap: 8px;
-  padding: 0 16px;
-  min-height: 56px;
-  padding-bottom: env(safe-area-inset-bottom, 0px);
+  height: calc(var(--ion-tab-bar-height, 56px) + env(safe-area-inset-bottom, 0px));
+  padding: 0 16px env(safe-area-inset-bottom, 0px);
   cursor: pointer;
   user-select: none;
   -webkit-user-select: none;

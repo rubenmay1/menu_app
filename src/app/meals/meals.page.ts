@@ -30,6 +30,8 @@ export class MealsPage implements OnInit, OnDestroy {
   editingIngredients: Ingredient[] = [];
   editingRecipeUrl: string = '';
 
+  editingNoIngredientsRequired: boolean = false;
+
   ingredientsPopupVisible: boolean = false;
 
   tooltipVisible: boolean = false;
@@ -176,6 +178,7 @@ export class MealsPage implements OnInit, OnDestroy {
     this.editingTagIds = [];
     this.editingIngredients = [];
     this.editingRecipeUrl = '';
+    this.editingNoIngredientsRequired = false;
     this.panelVisible = true;
   }
 
@@ -185,6 +188,7 @@ export class MealsPage implements OnInit, OnDestroy {
     this.editingTagIds = [...meal.tagIds];
     this.editingIngredients = [...meal.ingredients];
     this.editingRecipeUrl = meal.recipeUrl ?? '';
+    this.editingNoIngredientsRequired = meal.noIngredientsRequired ?? false;
     this.panelVisible = true;
   }
 
@@ -199,7 +203,8 @@ export class MealsPage implements OnInit, OnDestroy {
     if (!name) return;
     const id = this.editingMealId ?? this.mealService.createId();
     const recipeUrl = this.editingRecipeUrl.trim() || undefined;
-    await this.mealService.saveMeal({ id, name, tagIds: [...this.editingTagIds], ingredients: [...this.editingIngredients], recipeUrl });
+    const noIngredientsRequired = this.editingNoIngredientsRequired || undefined;
+    await this.mealService.saveMeal({ id, name, tagIds: [...this.editingTagIds], ingredients: [...this.editingIngredients], recipeUrl, noIngredientsRequired });
     [this.meals, this.mealUsageCounts] = await Promise.all([
       this.mealService.getMeals(),
       this.mealService.getMealUsageCounts()
@@ -227,7 +232,13 @@ export class MealsPage implements OnInit, OnDestroy {
     this.ingredientsPopupVisible = false;
   }
 
+  setNoIngredientsRequired(): void {
+    this.editingNoIngredientsRequired = true;
+    this.closeIngredientsPopup();
+  }
+
   onIngredientAdd(event: { name: string; tagIds: string[] }): void {
+    this.editingNoIngredientsRequired = false;
     this.editingIngredients.push({
       id: `ing-${Date.now()}-${Math.random().toString(36).slice(2)}`,
       name: event.name

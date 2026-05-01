@@ -12,7 +12,8 @@
       "Bash(npx tsc *)",
       "Bash(dir \"E:\\\\Documents\\\\Coding\\\\menu_app\\\\node_modules\\\\sql.js\\\\dist\")",
       "Bash(dir *)",
-      "Bash(npm uninstall *)"
+      "Bash(npm uninstall *)",
+      "Bash(xargs grep *)"
     ]
   }
 }

@@ -1,0 +1,45 @@
+<app-header></app-header>
+
+<ion-content>
+
+  <ng-container *ngIf="groups.length > 0; else emptyState">
+    <div class="group" *ngFor="let group of groups">
+      <div class="group-label">{{ group.label }}</div>
+
+      <div class="plan-row"
+        *ngFor="let record of group.records"
+        (click)="openPlan(record)"
+        (pointerdown)="onPointerDown(record.guid)"
+        (pointerup)="onPointerUp(record.guid)"
+        (pointerleave)="onPointerLeave(record.guid)"
+        (contextmenu)="$event.preventDefault()"
+      >
+        <div class="plan-row-content">
+          <ion-icon name="calendar-outline" class="plan-icon"></ion-icon>
+          <span class="plan-title">{{ recordTitle(record) }}</span>
+        </div>
+        <ion-icon name="chevron-forward-outline" class="plan-chevron"></ion-icon>
+      </div>
+    </div>
+  </ng-container>
+
+  <ng-template #emptyState>
+    <div class="empty-state">
+      <p>No shared plans yet. Open a meal plan link to save it here.</p>
+    </div>
+  </ng-template>
+
+</ion-content>
+
+<!-- Delete confirmation dialog -->
+<div class="backdrop" *ngIf="deleteTargetGuid !== null" (click)="cancelDelete()"></div>
+<div class="delete-dialog" *ngIf="deleteTargetGuid !== null">
+  <p class="delete-message">Remove this plan from your history?</p>
+  <div class="delete-actions">
+    <ion-button fill="clear" class="btn-cancel" (click)="cancelDelete()">Cancel</ion-button>
+    <ion-button fill="outline" class="btn-delete" (click)="confirmDelete()">
+      <ion-icon slot="start" name="trash-outline"></ion-icon>
+      Delete
+    </ion-button>
+  </div>
+</div>

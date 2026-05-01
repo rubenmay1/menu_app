@@ -47,11 +47,27 @@
       <p class="sync-popup-title">Import Tags &amp; Meals?</p>
       <p class="sync-popup-message">{{ importPromptMessage }}</p>
       <div class="sync-popup-actions">
-        <ion-button expand="block" (click)="onImportConfirm()">
-          <ion-icon slot="start" name="download-outline"></ion-icon>
+        <ion-button expand="block" (click)="onImportConfirm()" [disabled]="importLoading">
+          <ion-spinner *ngIf="importLoading" slot="start" name="crescent"></ion-spinner>
+          <ion-icon *ngIf="!importLoading" slot="start" name="download-outline"></ion-icon>
           Import
         </ion-button>
-        <ion-button expand="block" fill="clear" (click)="onImportCancel()">Cancel</ion-button>
+        <ion-button expand="block" fill="clear" (click)="onImportCancel()" [disabled]="importLoading">Cancel</ion-button>
+      </div>
+    </div>
+  </div>
+
+  <div class="sync-backdrop" *ngIf="importSuccessVisible" (click)="onImportSuccessDismiss()">
+    <div class="sync-popup" (click)="$event.stopPropagation()">
+      <div class="sync-popup-icon">
+        <ion-icon name="checkmark-circle-outline"></ion-icon>
+      </div>
+      <p class="sync-popup-title">Import Complete</p>
+      <div class="import-success-stats">
+        <p class="sync-popup-message" *ngFor="let line of importSuccessLines">{{ line }}</p>
+      </div>
+      <div class="sync-popup-actions">
+        <ion-button expand="block" (click)="onImportSuccessDismiss()">OK</ion-button>
       </div>
     </div>
   </div>

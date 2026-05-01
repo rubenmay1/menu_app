@@ -32,9 +32,13 @@
  * https://ionicframework.com/docs/theming/dark-mode
  */
 
-/* @import "@ionic/angular/css/palettes/dark.always.css"; */
+@import "@ionic/angular/css/palettes/dark.always.css";
 /* @import "@ionic/angular/css/palettes/dark.class.css"; */
-@import "@ionic/angular/css/palettes/dark.system.css";
+/* @import "@ionic/angular/css/palettes/dark.system.css"; */
+
+:root {
+  --ion-font-family: 'Inter', sans-serif;
+}
 
 body {
   font-family: 'Inter', sans-serif;
@@ -122,6 +126,14 @@ body {
   color: var(--ion-color-medium);
   text-align: center;
   margin: 0 0 20px;
+}
+
+.import-success-stats {
+  margin-bottom: 20px;
+}
+
+.import-success-stats .sync-popup-message {
+  margin-bottom: 4px;
 }
 
 .sync-popup-actions {

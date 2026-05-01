@@ -92,7 +92,7 @@ export class DropboxService {
 
     const verifier = localStorage.getItem(LS_VERIFIER);
     if (!verifier) {
-      throw new Error('OAuth code verifier missing — please try connecting again.');
+      throw new Error('OAuth code verifier missing - please try connecting again.');
     }
 
     const res = await fetch('https://api.dropboxapi.com/oauth2/token', {

@@ -40,3 +40,67 @@
     }
   }
 }
+
+.stepper-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.stepper-label {
+  font-family: 'Inter', sans-serif;
+  font-size: 15px;
+  font-weight: 500;
+  color: #fff;
+}
+
+.stepper {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.stepper-btn {
+  background: var(--surface-3);
+  border: none;
+  border-radius: 8px;
+  width: 32px;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  color: #fff;
+  font-size: 1.1rem;
+}
+
+.stepper-value {
+  font-family: 'Inter', sans-serif;
+  font-size: 15px;
+  font-weight: 600;
+  color: #fff;
+  min-width: 36px;
+  text-align: center;
+}
+
+.card-tabs-toggle {
+  background: var(--surface-1);
+  border-radius: 12px;
+  padding: 4px 16px;
+  display: flex;
+  flex-direction: column;
+
+  .toggle-item {
+    --background: transparent;
+    --padding-start: 0;
+    --inner-padding-end: 4px;
+
+    .toggle-title {
+      font-family: 'Inter', sans-serif;
+      font-size: 15px;
+      font-weight: 500;
+      color: #fff;
+      flex: 1;
+    }
+  }
+}

@@ -60,10 +60,19 @@ export interface SharedPlanDay {
 }
 
 export interface SharedPlanData {
+  guid?: string;
   year: number;
   isoWeek: number;
   days: SharedPlanDay[];
   extras: { id: string; mealName: string }[];
+}
+
+export interface SharedPlanRecord {
+  guid: string;
+  year: number;
+  isoWeek: number;
+  addedAt: string;
+  data: SharedPlanData;
 }
 
 export const PRESET_COLORS: string[] = [

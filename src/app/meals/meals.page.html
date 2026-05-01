@@ -105,10 +105,10 @@
 
       <p class="panel-section-label">Ingredients (optional)</p>
       <button class="ingredients-btn" (click)="openIngredientsPopup()">
-        <ion-icon name="list-outline"></ion-icon>
+        <ion-icon [name]="editingNoIngredientsRequired ? 'ban-outline' : 'list-outline'"></ion-icon>
         <span>{{ editingIngredients.length
           ? editingIngredients.length + ' ingredient' + (editingIngredients.length !== 1 ? 's' : '')
-          : 'Add ingredients' }}</span>
+          : editingNoIngredientsRequired ? 'No ingredients required' : 'Add ingredients' }}</span>
         <ion-icon name="chevron-forward-outline"></ion-icon>
       </button>
 
@@ -150,6 +150,17 @@
         (itemAdd)="onIngredientAdd($event)"
         (itemRemove)="removeIngredient($event)"
       ></app-item-editor>
+
+      <ion-button
+        *ngIf="editingIngredients.length === 0"
+        expand="block"
+        fill="outline"
+        (click)="setNoIngredientsRequired()"
+        style="margin-top: 12px"
+      >
+        <ion-icon slot="start" name="ban-outline"></ion-icon>
+        No Ingredients Required
+      </ion-button>
 
     </div>
   </div>

@@ -1,22 +1,27 @@
 <ion-tabs>
   <ion-tab-bar slot="bottom" [class.tab-bar--hidden]="isReadMode">
 
-    <ion-tab-button tab="plan">
+    <ion-tab-button tab="plan" *ngIf="showPlan">
       <ion-icon name="calendar-outline"></ion-icon>
       <ion-label>Plan</ion-label>
     </ion-tab-button>
 
-    <ion-tab-button tab="shopping">
+    <ion-tab-button tab="shopping" *ngIf="showList">
       <ion-icon name="cart-outline"></ion-icon>
       <ion-label>List</ion-label>
     </ion-tab-button>
 
-    <ion-tab-button tab="meals">
+    <ion-tab-button tab="shared" *ngIf="showShared">
+      <ion-icon name="albums-outline"></ion-icon>
+      <ion-label>Shared</ion-label>
+    </ion-tab-button>
+
+    <ion-tab-button tab="meals" *ngIf="showMeals">
       <ion-icon name="restaurant-outline"></ion-icon>
       <ion-label>Meals</ion-label>
     </ion-tab-button>
 
-    <ion-tab-button tab="tags">
+    <ion-tab-button tab="tags" *ngIf="showTags">
       <ion-icon name="pricetag-outline"></ion-icon>
       <ion-label>Tags</ion-label>
     </ion-tab-button>
@@ -31,5 +36,5 @@
 
 <div class="read-mode-bar" *ngIf="isReadMode" (click)="exitReadMode()">
   <ion-icon name="eye-outline"></ion-icon>
-  <span>Viewing plan in read mode — tap to exit</span>
+  <span>Viewing plan in read mode - tap to exit</span>
 </div>

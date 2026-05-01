@@ -1,9 +1,14 @@
-import { Component, OnDestroy } from '@angular/core';
+import { Component, ElementRef, OnDestroy, ViewChild } from '@angular/core';
 import { Subscription } from 'rxjs';
 import { AlertController, Platform } from '@ionic/angular';
+import { Capacitor } from '@capacitor/core';
 import { Share } from '@capacitor/share';
+import { Directory, Encoding, Filesystem } from '@capacitor/filesystem';
 import { DbService } from '../shared/db.service';
 import { DropboxService } from '../shared/dropbox.service';
+import { PreferenceService } from '../shared/preference.service';
+import { Tag } from '../tags/tag.model';
+import { Meal } from '../meals/meal.model';
 
 @Component({
   selector: 'app-settings',
@@ -12,6 +17,8 @@ import { DropboxService } from '../shared/dropbox.service';
   styleUrls: ['./settings.page.scss'],
 })
 export class SettingsPage implements OnDestroy {
+
+  @ViewChild('fileInput') fileInput!: ElementRef<HTMLInputElement>;
 
   isSyncing = false;
   isRestoring = false;
@@ -22,11 +29,18 @@ export class SettingsPage implements OnDestroy {
   private subs: Subscription[] = [];
   private backButtonSub: Subscription | null = null;
 
+  get showPlan(): boolean   { return this.prefs.showPlan; }
+  get showList(): boolean   { return this.prefs.showList; }
+  get showShared(): boolean { return this.prefs.showShared; }
+  get showMeals(): boolean  { return this.prefs.showMeals; }
+  get showTags(): boolean   { return this.prefs.showTags; }
+
   constructor(
     private db: DbService,
     private dropbox: DropboxService,
     private alertCtrl: AlertController,
     private platform: Platform,
+    private prefs: PreferenceService,
   ) {
     this.subs.push(
       this.dropbox.connecting$.subscribe(v => { this.isConnecting = v; }),
@@ -116,6 +130,16 @@ export class SettingsPage implements OnDestroy {
     await alert.present();
   }
 
+  onShowPlanChange(event: Event): void   { this.prefs.showPlan   = (event as CustomEvent).detail.checked; }
+  onShowListChange(event: Event): void   { this.prefs.showList   = (event as CustomEvent).detail.checked; }
+  onShowSharedChange(event: Event): void { this.prefs.showShared = (event as CustomEvent).detail.checked; }
+  onShowMealsChange(event: Event): void  { this.prefs.showMeals  = (event as CustomEvent).detail.checked; }
+  onShowTagsChange(event: Event): void   { this.prefs.showTags   = (event as CustomEvent).detail.checked; }
+
+  get frozenThresholdWeeks(): number { return this.prefs.frozenThresholdWeeks; }
+  incrementFrozenThreshold(): void { this.prefs.frozenThresholdWeeks = this.prefs.frozenThresholdWeeks + 1; }
+  decrementFrozenThreshold(): void { this.prefs.frozenThresholdWeeks = this.prefs.frozenThresholdWeeks - 1; }
+
   onResetStart(): void { this.resetStep = 1; }
   onResetConfirmFirst(): void { this.resetStep = 2; }
   onResetCancel(): void { this.resetStep = 0; }
@@ -125,20 +149,59 @@ export class SettingsPage implements OnDestroy {
     this.resetStep = 0;
   }
 
-  async shareTagsAndMeals(): Promise<void> {
+  async exportTagsAndMeals(): Promise<void> {
     const data = this.db.exportTagsAndMeals();
-    const json = JSON.stringify(data);
-    const b64 = btoa(encodeURIComponent(json));
-    const url = `https://rubenmay1.github.io/menu_app/import/?data=${encodeURIComponent(b64)}`;
-    try {
-      await Share.share({
-        title: 'Menu Tags & Meals',
-        text: url,
-        dialogTitle: 'Share Tags & Meals',
-      });
-    } catch {
-      // user cancelled share dialog — no-op
+    const json = JSON.stringify(data, null, 2);
+    const filename = 'menu-tags-meals.json';
+    if (Capacitor.isNativePlatform()) {
+      try {
+        const { uri } = await Filesystem.writeFile({
+          path: filename,
+          data: json,
+          directory: Directory.Cache,
+          encoding: Encoding.UTF8,
+        });
+        await Share.share({ title: 'Menu Tags & Meals', files: [uri], dialogTitle: 'Share Tags & Meals' });
+      } catch {
+        // user cancelled share dialog - no-op
+      }
+    } else {
+      const blob = new Blob([json], { type: 'application/json' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = filename;
+      a.click();
+      URL.revokeObjectURL(url);
     }
+  }
+
+  triggerImport(): void {
+    this.fileInput.nativeElement.click();
+  }
+
+  async onImportFileSelected(event: Event): Promise<void> {
+    const file = (event.target as HTMLInputElement).files?.[0];
+    if (!file) return;
+    try {
+      const text = await file.text();
+      const data = JSON.parse(text) as { tags: Tag[]; meals: Meal[] };
+      const r = this.db.importTagsAndMeals(data);
+      const alert = await this.alertCtrl.create({
+        header: 'Import Complete',
+        message: `Tags: ${r.tagsAdded} added, ${r.tagsOverwritten} updated. Meals: ${r.mealsAdded} added, ${r.mealsOverwritten} updated.`,
+        buttons: ['OK'],
+      });
+      await alert.present();
+    } catch {
+      const alert = await this.alertCtrl.create({
+        header: 'Import Failed',
+        message: 'Could not read the file. Make sure it is a valid Menu export.',
+        buttons: ['OK'],
+      });
+      await alert.present();
+    }
+    (event.target as HTMLInputElement).value = '';
   }
 
   private async showError(e: unknown): Promise<void> {

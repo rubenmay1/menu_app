@@ -5,9 +5,9 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Opening Menu…</title>
   <script>
-    const data = new URLSearchParams(window.location.search).get('data');
-    if (data) {
-      window.location.replace('menu-app://import?data=' + encodeURIComponent(data));
+    const match = window.location.search.replace(/^\?/, '').split('&').find(p => p.startsWith('data='));
+    if (match) {
+      window.location.replace('menu-app://import?' + match);
     }
   </script>
 </head>

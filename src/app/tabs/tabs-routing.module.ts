@@ -34,6 +34,11 @@ const routes: Routes = [
           import('../tags/tags.module').then(m => m.TagsPageModule)
       },
       {
+        path: 'shared',
+        loadChildren: () =>
+          import('../shared-plans/shared-plans.module').then(m => m.SharedPlansPageModule)
+      },
+      {
         path: '',
         redirectTo: 'plan',
         pathMatch: 'full'

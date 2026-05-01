@@ -36,11 +36,61 @@
   <div class="section">
     <div class="section-label">Sharing</div>
     <div class="card">
-      <p class="hint">Share your meals and tags with another device. The recipient will be offered an import prompt when they open the link.</p>
-      <ion-button expand="block" fill="outline" (click)="shareTagsAndMeals()">
-        <ion-icon slot="start" name="share-social-outline"></ion-icon>
-        Share Tags &amp; Meals
+      <p class="hint">Export your meals and tags as a file to share with another device, or import a file received from someone else.</p>
+      <input #fileInput type="file" accept=".json" style="display:none" (change)="onImportFileSelected($event)">
+      <ion-button expand="block" fill="outline" (click)="exportTagsAndMeals()">
+        <ion-icon slot="start" name="share-outline"></ion-icon>
+        Export Tags &amp; Meals
       </ion-button>
+      <ion-button expand="block" fill="outline" (click)="triggerImport()">
+        <ion-icon slot="start" name="download-outline"></ion-icon>
+        Import Tags &amp; Meals
+      </ion-button>
+    </div>
+  </div>
+
+  <div class="section">
+    <div class="section-label">Tabs</div>
+    <div class="card-tabs-toggle">
+      <ion-item lines="none" class="toggle-item">
+        <span class="toggle-title">Show Plan</span>
+        <ion-toggle slot="end" [checked]="showPlan" (ionChange)="onShowPlanChange($event)"></ion-toggle>
+      </ion-item>
+      <ion-item lines="none" class="toggle-item">
+        <span class="toggle-title">Show List</span>
+        <ion-toggle slot="end" [checked]="showList" (ionChange)="onShowListChange($event)"></ion-toggle>
+      </ion-item>
+      <ion-item lines="none" class="toggle-item">
+        <span class="toggle-title">Show Shared</span>
+        <ion-toggle slot="end" [checked]="showShared" (ionChange)="onShowSharedChange($event)"></ion-toggle>
+      </ion-item>
+      <ion-item lines="none" class="toggle-item">
+        <span class="toggle-title">Show Meals</span>
+        <ion-toggle slot="end" [checked]="showMeals" (ionChange)="onShowMealsChange($event)"></ion-toggle>
+      </ion-item>
+      <ion-item lines="none" class="toggle-item">
+        <span class="toggle-title">Show Tags</span>
+        <ion-toggle slot="end" [checked]="showTags" (ionChange)="onShowTagsChange($event)"></ion-toggle>
+      </ion-item>
+    </div>
+  </div>
+
+  <div class="section">
+    <div class="section-label">Meal Picker</div>
+    <div class="card">
+      <p class="hint">Show a snowflake icon for meals not used within this many weeks.</p>
+      <div class="stepper-row">
+        <span class="stepper-label">Frozen threshold</span>
+        <div class="stepper">
+          <button class="stepper-btn" (click)="decrementFrozenThreshold()">
+            <ion-icon name="remove-outline"></ion-icon>
+          </button>
+          <span class="stepper-value">{{ frozenThresholdWeeks }} wk</span>
+          <button class="stepper-btn" (click)="incrementFrozenThreshold()">
+            <ion-icon name="add-outline"></ion-icon>
+          </button>
+        </div>
+      </div>
     </div>
   </div>
 

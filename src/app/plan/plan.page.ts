@@ -1,6 +1,8 @@
 import { Component, OnInit, OnDestroy, AfterViewInit, AfterViewChecked, ViewChild, ViewChildren, QueryList, ElementRef } from '@angular/core';
+import { Router } from '@angular/router';
 import { IonContent, Platform } from '@ionic/angular';
 import { Share } from '@capacitor/share';
+import * as LZString from 'lz-string';
 import { Subscription } from 'rxjs';
 import { DayEntry, WeekState, MenuItem, ResolvedMenuItem, ExtraEntry, SharedPlanData } from './plan.models';
 import { PlanService } from './plan.service';
@@ -11,6 +13,7 @@ import { MealService } from '../meals/meal.service';
 import { Meal } from '../meals/meal.model';
 import { DbService } from '../shared/db.service';
 import { ViewPlanService } from '../shared/view-plan.service';
+import { PreferenceService } from '../shared/preference.service';
 import { getISOWeek, getISOWeekYear, getMondayOfISOWeek, formatShortDate } from '../shared/week-utils';
 import { WeekStateService } from '../shared/week-state.service';
 
@@ -29,7 +32,7 @@ export class PlanPage implements OnInit, OnDestroy, AfterViewInit, AfterViewChec
   @ViewChild(IonContent, { read: ElementRef }) private contentRef!: ElementRef;
   @ViewChildren('mealNameEl') private mealNameEls!: QueryList<ElementRef>;
 
-  readonly tagVisibility: Map<string, number> = new Map();
+  readonly itemStage: Map<string, number> = new Map();
   private tagVisibilityCheckPending = false;
   private tagVisibilityCheckScheduled = false;
 
@@ -48,6 +51,11 @@ export class PlanPage implements OnInit, OnDestroy, AfterViewInit, AfterViewChec
   pickerMeals: Meal[] = [];
   pickerTags: Tag[] = [];
   mealUsageCounts: Map<string, number> = new Map();
+  mealLastUsedDates: Map<string, Date> = new Map();
+  snowTooltipText: string | null = null;
+  snowTooltipTop: number | null = null;
+  snowTooltipFading = false;
+  private snowTooltipTimer: ReturnType<typeof setTimeout> | null = null;
 
   extrasEntries: ExtraEntry[] = [];
   extrasPickerVisible: boolean = false;
@@ -76,7 +84,9 @@ export class PlanPage implements OnInit, OnDestroy, AfterViewInit, AfterViewChec
     private readonly weekState: WeekStateService,
     private readonly db: DbService,
     private readonly viewPlanService: ViewPlanService,
+    private readonly prefs: PreferenceService,
     private readonly platform: Platform,
+    private readonly router: Router,
   ) {}
 
   async ngOnInit(): Promise<void> {
@@ -89,7 +99,7 @@ export class PlanPage implements OnInit, OnDestroy, AfterViewInit, AfterViewChec
         this.readMode = true;
         this.week = this.sharedToWeek(data);
         this.extrasEntries = data.extras;
-        this.initTagVisibility();
+        this.initItemStages();
       } else {
         this.readMode = false;
         void this.loadWeek(this.weekState.year, this.weekState.isoWeek);
@@ -116,24 +126,35 @@ export class PlanPage implements OnInit, OnDestroy, AfterViewInit, AfterViewChec
         const el = elRef.nativeElement as HTMLElement;
         const itemId = el.getAttribute('data-item-id') ?? '';
         if (el.scrollHeight > el.clientHeight + 1) {
-          const count = this.tagVisibility.get(itemId) ?? 0;
-          if (count > 0) {
-            this.tagVisibility.set(itemId, count - 1);
-            changed = true;
-          }
+          const stage = this.itemStage.get(itemId);
+          if (stage === undefined || stage >= 6) continue;
+          this.itemStage.set(itemId, stage + 1);
+          changed = true;
         }
       }
       if (!changed) this.tagVisibilityCheckPending = false;
     }, 0);
   }
 
-  private initTagVisibility(): void {
+  private initItemStages(): void {
     for (const day of this.week?.days ?? []) {
       for (const item of day.items) {
-        this.tagVisibility.set(item.id, item.resolvedTags.length);
+        this.itemStage.set(item.id, 1);
       }
     }
     this.tagVisibilityCheckPending = true;
+  }
+
+  getVisibleChipCount(itemId: string, total: number): number {
+    const stage = this.itemStage.get(itemId) ?? 1;
+    if (stage >= 6) return 0;
+    if (stage >= 5) return Math.min(1, total);
+    if (stage >= 2) return Math.min(2, total);
+    return total;
+  }
+
+  getOverflowCount(itemId: string, total: number): number {
+    return Math.max(0, total - this.getVisibleChipCount(itemId, total));
   }
 
   async ionViewWillEnter(): Promise<void> {
@@ -143,7 +164,7 @@ export class PlanPage implements OnInit, OnDestroy, AfterViewInit, AfterViewChec
           this.week.isoWeek === this.weekState.isoWeek) {
         this.tags = await this.tagService.getTags();
         this.week = { ...this.week, days: this.week.days.map(day => this.resolveDay(day)) };
-        this.initTagVisibility();
+        this.initItemStages();
       } else {
         await this.loadWeek(this.weekState.year, this.weekState.isoWeek);
       }
@@ -159,6 +180,9 @@ export class PlanPage implements OnInit, OnDestroy, AfterViewInit, AfterViewChec
         else { this.closeItemPopup(); }
       } else if (this.dayEditorVisible) {
         this.closeDayEditor();
+      } else if (this.readMode && this.viewPlanService.entrySource === 'history') {
+        this.viewPlanService.exit();
+        void this.router.navigate(['/tabs/shared']);
       } else {
         processNextHandler();
       }
@@ -244,6 +268,7 @@ export class PlanPage implements OnInit, OnDestroy, AfterViewInit, AfterViewChec
 
   async shareWeek(): Promise<void> {
     const data: SharedPlanData = {
+      guid: crypto.randomUUID(),
       year: this.week.year,
       isoWeek: this.week.isoWeek,
       days: this.week.days.map(d => ({
@@ -258,10 +283,10 @@ export class PlanPage implements OnInit, OnDestroy, AfterViewInit, AfterViewChec
       })),
       extras: this.extrasEntries.map(e => ({ id: e.id, mealName: e.mealName }))
     };
-    const b64 = btoa(encodeURIComponent(JSON.stringify(data)));
-    const url = `https://rubenmay1.github.io/menu_app/view-plan/?data=${encodeURIComponent(b64)}`;
+    const compressed = LZString.compressToEncodedURIComponent(JSON.stringify(data));
+    const url = `https://rubenmay1.github.io/menu_app/view-plan/?data=${compressed}`;
     try {
-      await Share.share({ title: 'My Meal Plan', text: url, dialogTitle: 'Share Meal Plan' });
+      await Share.share({ title: 'My Meal Plan', text: `Week ${this.week.isoWeek} Meal Plan:`, url, dialogTitle: 'Share Meal Plan' });
     } catch { /* user cancelled */ }
   }
 
@@ -359,7 +384,7 @@ export class PlanPage implements OnInit, OnDestroy, AfterViewInit, AfterViewChec
     }));
     this.extrasEntries = await this.planService.getExtras(year, isoWeek);
     this.week = { year, isoWeek, days };
-    this.initTagVisibility();
+    this.initItemStages();
   }
 
   onDayPointerDown(dayIndex: number): void {
@@ -439,7 +464,7 @@ export class PlanPage implements OnInit, OnDestroy, AfterViewInit, AfterViewChec
       ...this.week.days[dayIdx],
       items: this.resolveItems(await this.planService.getMenuItems(year, isoWeek, dayIdx))
     };
-    this.initTagVisibility();
+    this.initItemStages();
   }
 
   async removeItem(itemId: string): Promise<void> {
@@ -452,7 +477,7 @@ export class PlanPage implements OnInit, OnDestroy, AfterViewInit, AfterViewChec
       ...this.week.days[dayIdx],
       items: this.resolveItems(await this.planService.getMenuItems(year, isoWeek, dayIdx))
     };
-    this.initTagVisibility();
+    this.initItemStages();
   }
 
   async onItemUpdate(event: { id: string; name: string; tagIds: string[] }): Promise<void> {
@@ -467,7 +492,7 @@ export class PlanPage implements OnInit, OnDestroy, AfterViewInit, AfterViewChec
       ...this.week.days[dayIdx],
       items: this.resolveItems(await this.planService.getMenuItems(year, isoWeek, dayIdx))
     };
-    this.initTagVisibility();
+    this.initItemStages();
   }
 
   async handleReorder(reordered: EditorItem[]): Promise<void> {
@@ -487,7 +512,7 @@ export class PlanPage implements OnInit, OnDestroy, AfterViewInit, AfterViewChec
     await this.planService.setSubMenus(dayIdx,
       items.map(it => ({ id: it.id, name: it.name, tagIds: it.tagIds }))
     );
-    this.initTagVisibility();
+    this.initItemStages();
   }
 
   async openItemPopup(item: ResolvedMenuItem, dayIndex: number): Promise<void> {
@@ -496,11 +521,13 @@ export class PlanPage implements OnInit, OnDestroy, AfterViewInit, AfterViewChec
     this.pickerMode = 'default';
     this.customName = '';
     this.customStarred = false;
-    const [meals, usageCounts] = await Promise.all([
+    const [meals, usageCounts, lastUsed] = await Promise.all([
       this.mealService.getMeals(),
-      this.mealService.getMealUsageCounts()
+      this.mealService.getMealUsageCounts(),
+      this.mealService.getMealLastUsedDates()
     ]);
     this.mealUsageCounts = usageCounts;
+    this.mealLastUsedDates = lastUsed;
     if (item.tagIds.length > 0) {
       this.pickerMeals = meals.filter(m => m.tagIds.length === 0 || m.tagIds.some(tid => item.tagIds.includes(tid)));
       this.pickerTags = [...item.resolvedTags].sort((a, b) => a.name.localeCompare(b.name));
@@ -521,6 +548,9 @@ export class PlanPage implements OnInit, OnDestroy, AfterViewInit, AfterViewChec
     this.itemPopupVisible = false;
     this.itemPopupItem = null;
     this.itemPopupDayIndex = -1;
+    this.snowTooltipText = null;
+    this.snowTooltipTop = null;
+    this.snowTooltipFading = false;
   }
 
   async setNone(): Promise<void> {
@@ -570,11 +600,13 @@ export class PlanPage implements OnInit, OnDestroy, AfterViewInit, AfterViewChec
   }
 
   async openExtrasPicker(): Promise<void> {
-    const [meals, usageCounts] = await Promise.all([
+    const [meals, usageCounts, lastUsed] = await Promise.all([
       this.mealService.getMeals(),
-      this.mealService.getMealUsageCounts()
+      this.mealService.getMealUsageCounts(),
+      this.mealService.getMealLastUsedDates()
     ]);
     this.mealUsageCounts = usageCounts;
+    this.mealLastUsedDates = lastUsed;
     this.pickerMeals = meals.sort((a, b) => {
       const ua = usageCounts.get(a.name) ?? 0;
       const ub = usageCounts.get(b.name) ?? 0;
@@ -587,8 +619,52 @@ export class PlanPage implements OnInit, OnDestroy, AfterViewInit, AfterViewChec
     this.extrasPickerVisible = true;
   }
 
+  isMealFrozen(mealName: string): boolean {
+    const threshold = this.prefs.frozenThresholdWeeks;
+    const lastUsed = this.mealLastUsedDates.get(mealName);
+    if (!lastUsed) return true;
+    const weeksAgo = (Date.now() - lastUsed.getTime()) / (7 * 24 * 60 * 60 * 1000);
+    return weeksAgo >= threshold;
+  }
+
+  showSnowflakeTooltip(mealName: string, event: Event): void {
+    event.stopPropagation();
+
+    const path = event.composedPath() as Element[];
+    const row = path.find(el => (el as HTMLElement).classList?.contains('picker-meal-row')) as HTMLElement | undefined;
+    const popup = path.find(el => (el as HTMLElement).classList?.contains('picker-popup')) as HTMLElement | undefined;
+    if (row && popup) {
+      const scrollEl = popup.querySelector('.picker-popup-scroll') as HTMLElement | null;
+      const rowRect = row.getBoundingClientRect();
+      const popupRect = popup.getBoundingClientRect();
+      this.snowTooltipTop = rowRect.top - popupRect.top + (scrollEl?.scrollTop ?? 0) + rowRect.height / 2;
+    }
+
+    const lastUsed = this.mealLastUsedDates.get(mealName);
+    if (!lastUsed) {
+      this.snowTooltipText = 'Never used';
+    } else {
+      const weeks = Math.floor((Date.now() - lastUsed.getTime()) / (7 * 24 * 60 * 60 * 1000));
+      this.snowTooltipText = weeks === 1 ? '1 week ago' : `${weeks} weeks ago`;
+    }
+    this.snowTooltipFading = false;
+    if (this.snowTooltipTimer !== null) clearTimeout(this.snowTooltipTimer);
+    this.snowTooltipTimer = setTimeout(() => {
+      this.snowTooltipFading = true;
+      this.snowTooltipTimer = setTimeout(() => {
+        this.snowTooltipText = null;
+        this.snowTooltipTop = null;
+        this.snowTooltipFading = false;
+        this.snowTooltipTimer = null;
+      }, 300);
+    }, 2500);
+  }
+
   closeExtrasPicker(): void {
     this.extrasPickerVisible = false;
+    this.snowTooltipText = null;
+    this.snowTooltipTop = null;
+    this.snowTooltipFading = false;
   }
 
   async selectExtra(meal: Meal): Promise<void> {
@@ -634,6 +710,6 @@ export class PlanPage implements OnInit, OnDestroy, AfterViewInit, AfterViewChec
       ...this.week.days[dayIndex],
       items: this.resolveItems(await this.planService.getMenuItems(year, isoWeek, dayIndex))
     };
-    this.initTagVisibility();
+    this.initItemStages();
   }
 }

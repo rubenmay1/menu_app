@@ -10,6 +10,7 @@ export class MealService {
   saveMeal(meal: Meal): Promise<void> { return this.db.saveMeal(meal); }
   deleteMeal(id: string): Promise<void> { return this.db.deleteMeal(id); }
   getMealUsageCounts(): Promise<Map<string, number>> { return this.db.getMealUsageCounts(); }
+  getMealLastUsedDates(): Promise<Map<string, Date>> { return this.db.getMealLastUsedDates(); }
 
   createId(): string {
     return `meal-${Date.now()}-${Math.random().toString(36).slice(2)}`;

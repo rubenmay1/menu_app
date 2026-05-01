@@ -16,6 +16,16 @@ const routes: Routes = [
     path: 'dropbox-callback',
     redirectTo: 'tabs',
     pathMatch: 'full'
+  },
+  {
+    path: 'import',
+    redirectTo: 'tabs',
+    pathMatch: 'full'
+  },
+  {
+    path: 'view-plan',
+    redirectTo: 'tabs',
+    pathMatch: 'full'
   }
 ];
 

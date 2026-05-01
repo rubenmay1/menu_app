@@ -9,4 +9,5 @@ export interface Meal {
   tagIds: string[];
   ingredients: Ingredient[];
   recipeUrl?: string;
+  noIngredientsRequired?: boolean;
 }

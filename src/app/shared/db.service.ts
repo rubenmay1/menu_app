@@ -3,6 +3,7 @@ import { Subject, Observable } from 'rxjs';
 import { Tag } from '../tags/tag.model';
 import { Meal } from '../meals/meal.model';
 import { SubMenu, WeekMealEntry, ExtraEntry } from '../plan/plan.models';
+import { getMondayOfISOWeek } from './week-utils';
 
 // All storage is localStorage. To migrate to SQLite:
 // 1. Import CapacitorSQLite, SQLiteConnection from @capacitor-community/sqlite
@@ -83,15 +84,67 @@ export class DbService {
     const map = new Map<string, number>();
     for (let i = 0; i < localStorage.length; i++) {
       const key = localStorage.key(i);
-      if (!key?.startsWith('week-meals-')) continue;
-      const entries: WeekMealEntry[] = JSON.parse(localStorage.getItem(key) ?? '[]');
-      for (const entry of entries) {
-        if (entry.mealName && entry.mealName !== '' && entry.mealName !== '--') {
-          map.set(entry.mealName, (map.get(entry.mealName) ?? 0) + 1);
+      if (!key) continue;
+      if (key.startsWith('week-meals-')) {
+        const entries: WeekMealEntry[] = JSON.parse(localStorage.getItem(key) ?? '[]');
+        for (const entry of entries) {
+          if (entry.mealName && entry.mealName !== '' && entry.mealName !== '--' && entry.mealName !== 'None') {
+            map.set(entry.mealName, (map.get(entry.mealName) ?? 0) + 1);
+          }
+        }
+      } else if (key.startsWith('week-extras-')) {
+        const entries: ExtraEntry[] = JSON.parse(localStorage.getItem(key) ?? '[]');
+        for (const entry of entries) {
+          if (entry.mealName) {
+            map.set(entry.mealName, (map.get(entry.mealName) ?? 0) + 1);
+          }
         }
       }
     }
     return map;
+  }
+
+  async getMealLastUsedDates(): Promise<Map<string, Date>> {
+    const weekMap = new Map<string, { year: number; isoWeek: number }>();
+
+    for (let i = 0; i < localStorage.length; i++) {
+      const key = localStorage.key(i);
+      if (!key) continue;
+
+      if (key.startsWith('week-meals-')) {
+        const parts = key.split('-');
+        const year = parseInt(parts[2], 10);
+        const isoWeek = parseInt(parts[3], 10);
+        if (isNaN(year) || isNaN(isoWeek)) continue;
+        const entries: WeekMealEntry[] = JSON.parse(localStorage.getItem(key) ?? '[]');
+        for (const entry of entries) {
+          if (!entry.mealName || entry.mealName === '' || entry.mealName === '--' || entry.mealName === 'None') continue;
+          const existing = weekMap.get(entry.mealName);
+          if (!existing || year > existing.year || (year === existing.year && isoWeek > existing.isoWeek)) {
+            weekMap.set(entry.mealName, { year, isoWeek });
+          }
+        }
+      } else if (key.startsWith('week-extras-')) {
+        const parts = key.split('-');
+        const year = parseInt(parts[2], 10);
+        const isoWeek = parseInt(parts[3], 10);
+        if (isNaN(year) || isNaN(isoWeek)) continue;
+        const entries: ExtraEntry[] = JSON.parse(localStorage.getItem(key) ?? '[]');
+        for (const entry of entries) {
+          if (!entry.mealName) continue;
+          const existing = weekMap.get(entry.mealName);
+          if (!existing || year > existing.year || (year === existing.year && isoWeek > existing.isoWeek)) {
+            weekMap.set(entry.mealName, { year, isoWeek });
+          }
+        }
+      }
+    }
+
+    const dateMap = new Map<string, Date>();
+    for (const [name, { year, isoWeek }] of weekMap) {
+      dateMap.set(name, getMondayOfISOWeek(year, isoWeek));
+    }
+    return dateMap;
   }
 
   // ---- SubMenus ----
@@ -136,30 +189,37 @@ export class DbService {
     return { tags, meals };
   }
 
-  importTagsAndMeals(data: { tags: Tag[]; meals: Meal[] }): void {
+  importTagsAndMeals(data: { tags: Tag[]; meals: Meal[] }): { tagsAdded: number; tagsOverwritten: number; mealsAdded: number; mealsOverwritten: number } {
+    let tagsAdded = 0, tagsOverwritten = 0;
     const existingTags: Tag[] = JSON.parse(localStorage.getItem('tags') ?? '[]');
     for (const imported of data.tags) {
       const idx = existingTags.findIndex(t => t.name.toLowerCase() === imported.name.toLowerCase());
       if (idx >= 0) {
         existingTags[idx] = { ...imported, id: existingTags[idx].id };
+        tagsOverwritten++;
       } else {
         existingTags.push(imported);
+        tagsAdded++;
       }
     }
     localStorage.setItem('tags', JSON.stringify(existingTags));
 
+    let mealsAdded = 0, mealsOverwritten = 0;
     const existingMeals: Meal[] = JSON.parse(localStorage.getItem('meals') ?? '[]');
     for (const imported of data.meals) {
       const idx = existingMeals.findIndex(m => m.name.toLowerCase() === imported.name.toLowerCase());
       if (idx >= 0) {
         existingMeals[idx] = { ...imported, id: existingMeals[idx].id };
+        mealsOverwritten++;
       } else {
         existingMeals.push(imported);
+        mealsAdded++;
       }
     }
     localStorage.setItem('meals', JSON.stringify(existingMeals));
 
     this.dataChangedSubject.next();
+    return { tagsAdded, tagsOverwritten, mealsAdded, mealsOverwritten };
   }
 
   async clearWeekMeals(year: number, week: number): Promise<void> {
