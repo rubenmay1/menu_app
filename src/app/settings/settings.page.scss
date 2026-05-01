@@ -14,10 +14,10 @@
 .section-label {
   font-family: 'Inter', sans-serif;
   font-weight: 600;
-  font-size: 13px;
+  font-size: 0.75rem;
   text-transform: uppercase;
-  letter-spacing: 0.8px;
-  color: rgba(255, 255, 255, 0.5);
+  letter-spacing: 0.06em;
+  color: var(--ion-color-medium);
   margin-bottom: 10px;
 }
 

@@ -160,6 +160,37 @@ Has absolute-positioned close button (`.ing-close`) top-right: `position: absolu
 
 ---
 
+### 6. Dropbox Connect Prompt (`dropbox-backdrop` + `dropbox-panel`)
+
+Bottom-sheet variant used only for the first-run "Back up to Dropbox?" prompt in `app.component`. Defined in `app.component.scss`. z-index: 1000.
+
+Same shape as the standard bottom panel (`border-radius: 28px 28px 0 0`, `max-width: 480px`) but slightly larger padding (`28px 16px 40px`) and includes a centered logo wrap. Animations are inherited from the global `.dropbox-panel` / `.dropbox-backdrop` keyframes (slide-up + fade-in).
+
+---
+
+### 7. Bottom-Anchored Delete Dialog (`delete-dialog`)
+
+Used on the Shared page when long-pressing a row. Unlike centered popups, this anchors to the bottom of the viewport with safe-area inset. z-index: 1001 (sits above the global `.backdrop` at z-index 1000).
+
+```html
+<div class="backdrop" *ngIf="visible" (click)="cancel()"></div>
+<div class="delete-dialog" *ngIf="visible">
+  <p class="delete-message">Remove this plan from your history?</p>
+  <div class="delete-actions">
+    <ion-button fill="clear" (click)="cancel()">Cancel</ion-button>
+    <ion-button fill="outline" class="btn-delete" (click)="confirm()">
+      <ion-icon slot="start" name="trash-outline"></ion-icon>
+      Delete
+    </ion-button>
+  </div>
+</div>
+```
+
+Key dimensions: `left/right: 16px`, `bottom: calc(24px + env(safe-area-inset-bottom, 0px))`, `background: var(--surface-2)`, `border-radius: 16px`, `padding: 20px 16px 16px`.
+Action buttons here use a horizontal row (`display: flex; justify-content: flex-end`) — destructive on the right, Cancel on the left. This is the only place the standard column action-group rule does not apply.
+
+---
+
 ## Buttons
 
 ### Save / Primary Action
@@ -209,7 +240,7 @@ Standard usage for common icons. Always `flex-shrink: 0` on inline row icons.
 | `checkmark-outline` | button slot | — | Save/confirm button |
 | `trash-outline` | button slot | `rgb(255,180,171)` | Delete button |
 | `warning-outline` | 1rem (inline), 2.2rem (popup) | primary / medium | Alert popup, plan-incomplete warning |
-| `checkmark-done-outline` | 1.2–1.3rem | `#fff` | Week/day complete tick |
+| `checkmark-circle` | 1.2rem | `#fff` | Day complete tick (plan page day header) |
 | `flame-outline` | 1.05rem | `var(--ion-color-warning, #ffc409)` | Usage count indicator |
 | `snow-outline` | 1.05rem | `#89CFF0` | Frozen/unused meal indicator |
 | `link-outline` | 1.1rem | `var(--ion-color-primary)` | Recipe URL indicator |
@@ -351,7 +382,7 @@ Global keyframes defined in `global.scss`. Applied automatically to matching cla
 
 | Class | Animation | Duration |
 |---|---|---|
-| `.backdrop`, `.sync-backdrop`, `.picker-backdrop` | `fade-in` (opacity 0→1) | 0.2s ease |
+| `.backdrop`, `.sync-backdrop`, `.picker-backdrop`, `.ing-backdrop`, `.dropbox-backdrop` | `fade-in` (opacity 0→1) | 0.2s ease |
 | `.bottom-panel`, `.dropbox-panel` | `slide-up` (translateY 100%→0) | 0.3s cubic-bezier(0.32, 0.72, 0, 1) |
 | `.picker-popup`, `.ing-popup`, `.sync-popup` | `pop-in` (scale 0.92→1 + fade) | 0.22s cubic-bezier(0.34, 1.56, 0.64, 1) |
 

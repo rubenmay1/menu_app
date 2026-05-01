@@ -1,7 +1,3 @@
-ion-content {
-  --background: rgb(0, 0, 0);
-}
-
 .group {
   margin: 16px 0 8px;
 }
@@ -10,7 +6,7 @@ ion-content {
   font-family: 'Inter', sans-serif;
   font-size: 0.75rem;
   font-weight: 600;
-  color: rgba(255, 255, 255, 0.4);
+  color: var(--ion-color-medium);
   text-transform: uppercase;
   letter-spacing: 0.08em;
   padding: 0 16px;
@@ -21,7 +17,7 @@ ion-content {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  background: rgb(30, 30, 30);
+  background: var(--surface-1);
   margin: 0 12px 6px;
   border-radius: 12px;
   padding: 14px 16px;
@@ -58,21 +54,14 @@ ion-content {
   font-size: 1rem;
 }
 
-// --- Delete dialog ---
-
-.backdrop {
-  position: fixed;
-  inset: 0;
-  background: rgba(0, 0, 0, 0.6);
-  z-index: 1000;
-}
+// --- Delete dialog (bottom-anchored, not centered) ---
 
 .delete-dialog {
   position: fixed;
   left: 16px;
   right: 16px;
   bottom: calc(24px + env(safe-area-inset-bottom, 0px));
-  background: rgb(45, 45, 45);
+  background: var(--surface-2);
   border-radius: 16px;
   padding: 20px 16px 16px;
   z-index: 1001;
@@ -90,11 +79,5 @@ ion-content {
     display: flex;
     gap: 8px;
     justify-content: flex-end;
-
-    .btn-delete {
-      --border-color: rgb(255, 180, 171);
-      --color: rgb(255, 180, 171);
-      font-family: 'Inter', sans-serif;
-    }
   }
 }
