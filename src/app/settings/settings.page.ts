@@ -9,6 +9,7 @@ import { DropboxService } from '../shared/dropbox.service';
 import { PreferenceService } from '../shared/preference.service';
 import { Tag } from '../tags/tag.model';
 import { Meal } from '../meals/meal.model';
+import { environment } from '../../environments/environment';
 
 @Component({
   selector: 'app-settings',
@@ -18,6 +19,8 @@ import { Meal } from '../meals/meal.model';
 })
 export class SettingsPage implements OnDestroy {
 
+  readonly version = environment.version;
+
   @ViewChild('fileInput') fileInput!: ElementRef<HTMLInputElement>;
 
   isSyncing = false;
@@ -25,6 +28,8 @@ export class SettingsPage implements OnDestroy {
   isConnecting = false;
   isConnected = false;
   resetStep: 0 | 1 | 2 = 0;
+  viewDataVisible = false;
+  dataStats: { totalSizeKb: number; mealCount: number; tagCount: number; weeksPlanned: number } | null = null;
 
   private subs: Subscription[] = [];
   private backButtonSub: Subscription | null = null;
@@ -54,7 +59,9 @@ export class SettingsPage implements OnDestroy {
 
   ionViewWillEnter(): void {
     this.backButtonSub = this.platform.backButton.subscribeWithPriority(10, (processNextHandler) => {
-      if (this.resetStep > 0) {
+      if (this.viewDataVisible) {
+        this.onViewDataDismiss();
+      } else if (this.resetStep > 0) {
         this.onResetCancel();
       } else {
         processNextHandler();
@@ -143,6 +150,15 @@ export class SettingsPage implements OnDestroy {
   onResetStart(): void { this.resetStep = 1; }
   onResetConfirmFirst(): void { this.resetStep = 2; }
   onResetCancel(): void { this.resetStep = 0; }
+
+  onViewData(): void {
+    this.dataStats = this.db.getDataStats();
+    this.viewDataVisible = true;
+  }
+
+  onViewDataDismiss(): void {
+    this.viewDataVisible = false;
+  }
 
   onResetConfirm(): void {
     this.db.resetAll();

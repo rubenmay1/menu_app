@@ -182,12 +182,6 @@ export class PlanPage implements OnInit, OnDestroy, AfterViewInit, AfterViewChec
     return day.items.length > 0 && day.items.every(item => !!(item.mealName?.trim()));
   }
 
-  get isWeekComplete(): boolean {
-    if (!this.week) return false;
-    const daysWithItems = this.week.days.filter(d => d.items.length > 0);
-    return daysWithItems.length > 0 && daysWithItems.every(d => this.isDayComplete(d));
-  }
-
   private resolveDay(day: DayEntry): DayEntry {
     return {
       ...day,

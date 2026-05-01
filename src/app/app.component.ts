@@ -42,12 +42,18 @@ export class AppComponent implements OnInit {
   connectPromptVisible = false;
   syncPromptVisible = false;
   syncPromptMessage = '';
-  importPromptVisible = false;
-  importPromptMessage = '';
-  importLoading = false;
-  importSuccessVisible = false;
-  importSuccessLines: string[] = [];
-  private pendingImportData: { tags: Tag[]; meals: Meal[] } | null = null;
+  mealsAndTagsImportPromptVisible = false;
+  mealsAndTagsImportPromptMessage = '';
+  mealsAndTagsImportLoading = false;
+  mealsAndTagsImportSuccessVisible = false;
+  mealsAndTagsImportSuccessLines: string[] = [];
+  private pendingMealsAndTagsImportData: { tags: Tag[]; meals: Meal[] } | null = null;
+  mealImportPromptVisible = false;
+  mealImportPromptMessage = '';
+  mealImportLoading = false;
+  mealImportSuccessVisible = false;
+  mealImportSuccessMessage = '';
+  private pendingMealImportData: Meal | null = null;
 
   tutorialVisible = false;
   tutorialText = '';
@@ -80,7 +86,9 @@ export class AppComponent implements OnInit {
           await this.showError(e);
         }
       } else if (this.initialPath === '/import') {
-        this.handleImportUrl(this.initialHref);
+        this.handleMealsAndTagsImportUrl(this.initialHref);
+      } else if (this.initialPath === '/import-meal') {
+        this.handleMealImportUrl(this.initialHref);
       } else if (this.initialPath === '/view-plan') {
         this.handleViewPlanUrl(this.initialHref);
       }
@@ -106,8 +114,10 @@ export class AppComponent implements OnInit {
 
     this.platform.backButton.subscribeWithPriority(20, (processNextHandler) => {
       if (this.syncPromptVisible) { this.onSyncSkip(); }
-      else if (this.importSuccessVisible) { this.onImportSuccessDismiss(); }
-      else if (this.importPromptVisible) { this.onImportCancel(); }
+      else if (this.mealImportSuccessVisible) { this.onMealImportSuccessDismiss(); }
+      else if (this.mealImportPromptVisible) { this.onMealImportCancel(); }
+      else if (this.mealsAndTagsImportSuccessVisible) { this.onMealsAndTagsImportSuccessDismiss(); }
+      else if (this.mealsAndTagsImportPromptVisible) { this.onMealsAndTagsImportCancel(); }
       else if (this.connectPromptVisible) { this.onConnectLater(); }
       else { processNextHandler(); }
     });
@@ -216,8 +226,10 @@ export class AppComponent implements OnInit {
       } catch (e: unknown) {
         await this.showError(e);
       }
+    } else if (url.startsWith('menu-app://import-meal')) {
+      this.handleMealImportUrl(url);
     } else if (url.startsWith('menu-app://import')) {
-      this.handleImportUrl(url);
+      this.handleMealsAndTagsImportUrl(url);
     } else if (url.startsWith('menu-app://view-plan')) {
       this.handleViewPlanUrl(url);
     }
@@ -235,33 +247,33 @@ export class AppComponent implements OnInit {
     return null;
   }
 
-  // ---- Import ----
+  // ---- MealsAndTags Import ----
 
-  private handleImportUrl(url: string): void {
+  private handleMealsAndTagsImportUrl(url: string): void {
     try {
       const encoded = this.urlParam(url, 'data');
       if (!encoded) return;
       const json = LZString.decompressFromEncodedURIComponent(encoded);
       if (!json) {
-        this.showImportError();
+        this.showMealsAndTagsImportError();
         return;
       }
       const data = JSON.parse(json) as { tags: Tag[]; meals: Meal[] };
       if (!Array.isArray(data.tags) || !Array.isArray(data.meals)) {
-        this.showImportError();
+        this.showMealsAndTagsImportError();
         return;
       }
       const tagCount = data.tags.length;
       const mealCount = data.meals.length;
-      this.pendingImportData = data;
-      this.importPromptMessage = `Import ${tagCount} tag${tagCount !== 1 ? 's' : ''} and ${mealCount} meal${mealCount !== 1 ? 's' : ''}? Existing items with the same name will be overwritten.`;
-      this.importPromptVisible = true;
+      this.pendingMealsAndTagsImportData = data;
+      this.mealsAndTagsImportPromptMessage = `Import ${tagCount} tag${tagCount !== 1 ? 's' : ''} and ${mealCount} meal${mealCount !== 1 ? 's' : ''}? Existing items with the same name will be overwritten.`;
+      this.mealsAndTagsImportPromptVisible = true;
     } catch {
-      this.showImportError();
+      this.showMealsAndTagsImportError();
     }
   }
 
-  private showImportError(): void {
+  private showMealsAndTagsImportError(): void {
     this.alertCtrl.create({
       header: 'Import Failed',
       message: 'The import link appears to be corrupted or truncated. Try sharing it again directly - some apps shorten or cut off long links.',
@@ -269,17 +281,17 @@ export class AppComponent implements OnInit {
     }).then(a => a.present());
   }
 
-  async onImportConfirm(): Promise<void> {
-    if (!this.pendingImportData) return;
-    this.importLoading = true;
+  async onMealsAndTagsImportConfirm(): Promise<void> {
+    if (!this.pendingMealsAndTagsImportData) return;
+    this.mealsAndTagsImportLoading = true;
     let result!: ReturnType<DbService['importTagsAndMeals']>;
     await Promise.all([
       new Promise<void>(r => setTimeout(r, 1000)),
-      Promise.resolve().then(() => { result = this.db.importTagsAndMeals(this.pendingImportData!); }),
+      Promise.resolve().then(() => { result = this.db.importTagsAndMeals(this.pendingMealsAndTagsImportData!); }),
     ]);
-    this.importLoading = false;
-    this.importPromptVisible = false;
-    this.pendingImportData = null;
+    this.mealsAndTagsImportLoading = false;
+    this.mealsAndTagsImportPromptVisible = false;
+    this.pendingMealsAndTagsImportData = null;
     const { tagsAdded, tagsOverwritten, mealsAdded, mealsOverwritten } = result;
     const lines: string[] = [];
     if (tagsAdded || tagsOverwritten) {
@@ -288,17 +300,63 @@ export class AppComponent implements OnInit {
     if (mealsAdded || mealsOverwritten) {
       lines.push(`Meals: ${mealsAdded} added, ${mealsOverwritten} overwritten`);
     }
-    this.importSuccessLines = lines.length ? lines : ['Nothing to import.'];
-    this.importSuccessVisible = true;
+    this.mealsAndTagsImportSuccessLines = lines.length ? lines : ['Nothing to import.'];
+    this.mealsAndTagsImportSuccessVisible = true;
   }
 
-  onImportCancel(): void {
-    this.importPromptVisible = false;
-    this.pendingImportData = null;
+  onMealsAndTagsImportCancel(): void {
+    this.mealsAndTagsImportPromptVisible = false;
+    this.pendingMealsAndTagsImportData = null;
   }
 
-  onImportSuccessDismiss(): void {
-    this.importSuccessVisible = false;
+  onMealsAndTagsImportSuccessDismiss(): void {
+    this.mealsAndTagsImportSuccessVisible = false;
+  }
+
+  // ---- Meal Import ----
+
+  private handleMealImportUrl(url: string): void {
+    try {
+      const encoded = this.urlParam(url, 'data');
+      if (!encoded) return;
+      const json = LZString.decompressFromEncodedURIComponent(encoded);
+      if (!json) return;
+      const meal = JSON.parse(json) as Meal;
+      if (!meal.name) return;
+      this.pendingMealImportData = meal;
+      this.mealImportPromptMessage = `Import "${meal.name}"?`;
+      this.mealImportPromptVisible = true;
+    } catch { /* malformed link - ignore */ }
+  }
+
+  async onMealImportConfirm(): Promise<void> {
+    if (!this.pendingMealImportData) return;
+    const meal = this.pendingMealImportData;
+    this.mealImportLoading = true;
+    const mealToImport: Meal = {
+      id: `meal-${Date.now()}-${Math.random().toString(36).slice(2)}`,
+      name: meal.name,
+      tagIds: [],
+      ingredients: meal.ingredients ?? [],
+      recipeUrl: meal.recipeUrl,
+      noIngredientsRequired: meal.noIngredientsRequired,
+    };
+    await new Promise<void>(r => setTimeout(r, 1000));
+    this.db.importTagsAndMeals({ tags: [], meals: [mealToImport] });
+    this.mealImportLoading = false;
+    this.mealImportPromptVisible = false;
+    this.pendingMealImportData = null;
+    this.mealImportSuccessMessage = `Imported ${meal.name}`;
+    this.mealImportSuccessVisible = true;
+  }
+
+  onMealImportCancel(): void {
+    this.mealImportPromptVisible = false;
+    this.pendingMealImportData = null;
+  }
+
+  onMealImportSuccessDismiss(): void {
+    this.mealImportSuccessVisible = false;
   }
 
   // ---- View plan (read mode) ----

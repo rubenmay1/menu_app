@@ -97,13 +97,50 @@
   <div class="section">
     <div class="section-label">Data</div>
     <div class="card">
+      <ion-button expand="block" fill="outline" (click)="onViewData()">
+        <ion-icon slot="start" name="bar-chart-outline"></ion-icon>
+        View Data
+      </ion-button>
       <ion-button expand="block" class="btn-delete" fill="outline" (click)="onResetStart()">
         <ion-icon slot="start" name="trash-outline"></ion-icon>
         Reset App Data
       </ion-button>
     </div>
   </div>
+
+  <p class="app-version">v{{ version }}</p>
+
 </ion-content>
+
+<div class="sync-backdrop" *ngIf="viewDataVisible" (click)="onViewDataDismiss()">
+  <div class="sync-popup" (click)="$event.stopPropagation()">
+    <div class="sync-popup-icon">
+      <ion-icon name="bar-chart-outline"></ion-icon>
+    </div>
+    <p class="sync-popup-title">Data Summary</p>
+    <div class="data-stats" *ngIf="dataStats">
+      <div class="data-stat-row">
+        <span class="data-stat-label">Total database size</span>
+        <span class="data-stat-value">{{ dataStats.totalSizeKb }} KB</span>
+      </div>
+      <div class="data-stat-row">
+        <span class="data-stat-label">Meal count</span>
+        <span class="data-stat-value">{{ dataStats.mealCount }}</span>
+      </div>
+      <div class="data-stat-row">
+        <span class="data-stat-label">Tag count</span>
+        <span class="data-stat-value">{{ dataStats.tagCount }}</span>
+      </div>
+      <div class="data-stat-row">
+        <span class="data-stat-label">Weeks planned</span>
+        <span class="data-stat-value">{{ dataStats.weeksPlanned }}</span>
+      </div>
+    </div>
+    <div class="sync-popup-actions">
+      <ion-button expand="block" (click)="onViewDataDismiss()">OK</ion-button>
+    </div>
+  </div>
+</div>
 
 <div class="sync-backdrop" *ngIf="resetStep === 1" (click)="onResetCancel()">
   <div class="sync-popup" (click)="$event.stopPropagation()">

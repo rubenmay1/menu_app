@@ -29,6 +29,7 @@ export class ShoppingPage implements OnDestroy, AfterViewInit {
   @ViewChild(IonContent, { read: ElementRef }) private contentRef!: ElementRef;
 
   week: { year: number; isoWeek: number } | null = null;
+  isWeekComplete = false;
   activeItems: ShoppingItem[] = [];
   doneItems: ShoppingItem[] = [];
 
@@ -93,9 +94,15 @@ export class ShoppingPage implements OnDestroy, AfterViewInit {
     const mealByName = new Map<string, Meal>(meals.map(m => [m.name.toLowerCase(), m]));
     const doneKeys = this.loadDoneKeys(year, isoWeek);
     const allItems: ShoppingItem[] = [];
+    let daysWithItems = 0;
+    let completeDays = 0;
 
     for (let dayIndex = 0; dayIndex < DAY_COUNT; dayIndex++) {
       const menuItems = await this.planService.getMenuItems(year, isoWeek, dayIndex);
+      if (menuItems.length > 0) {
+        daysWithItems++;
+        if (menuItems.every(it => !!(it.mealName?.trim()))) completeDays++;
+      }
       for (const menuItem of menuItems) {
         if (!menuItem.mealName || menuItem.mealName === '--' || menuItem.mealName === '' || menuItem.mealName === 'None') continue;
         const meal = mealByName.get(menuItem.mealName.toLowerCase());
@@ -121,6 +128,8 @@ export class ShoppingPage implements OnDestroy, AfterViewInit {
         }
       }
     }
+
+    this.isWeekComplete = daysWithItems > 0 && completeDays === daysWithItems;
 
     const extras: ExtraEntry[] = await this.planService.getExtras(year, isoWeek);
     for (const entry of extras) {

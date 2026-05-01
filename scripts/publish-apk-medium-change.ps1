@@ -22,6 +22,8 @@ if ($gradleContent -match 'versionName\s+"([^"]+)"') {
 [System.IO.File]::WriteAllText((Resolve-Path $gradlePath), $gradleContent, [System.Text.UTF8Encoding]::new($false))
 Write-Host "Version bumped: $oldName -> $newName (code $oldCode -> $newCode)" -ForegroundColor Green
 
+& "$PSScriptRoot\sync-version.ps1"
+
 Write-Host "Building and syncing for release..." -ForegroundColor Cyan
 ionic build --prod
 

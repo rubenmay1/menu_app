@@ -2,6 +2,15 @@
   padding: 20px 16px;
 }
 
+.app-version {
+  font-family: 'Inter', sans-serif;
+  font-size: 0.75rem;
+  color: rgba(255, 255, 255, 0.3);
+  text-align: center;
+  padding: 8px 0 24px;
+  margin: 0;
+}
+
 .section-label {
   font-family: 'Inter', sans-serif;
   font-weight: 600;
@@ -81,6 +90,31 @@
   color: #fff;
   min-width: 36px;
   text-align: center;
+}
+
+.data-stats {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin: 20px 0;
+}
+
+.data-stat-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-family: 'Inter', sans-serif;
+  font-size: 14px;
+}
+
+.data-stat-label {
+  color: rgba(255, 255, 255, 0.6);
+}
+
+.data-stat-value {
+  font-weight: 600;
+  color: #fff;
 }
 
 .card-tabs-toggle {

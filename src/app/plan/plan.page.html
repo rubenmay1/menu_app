@@ -7,7 +7,6 @@
   <app-week-nav
     [isoWeek]="week.isoWeek"
     [year]="week.year"
-    [isComplete]="isWeekComplete"
     [showArrows]="!readMode"
     [showShare]="!readMode"
     [showClear]="!readMode"
@@ -34,7 +33,7 @@
         <!-- Group the Name and Tick together so they stay on the left -->
         <div class="day-header-left">
           <span class="day-name">{{ day.dayName }}</span>
-          <ion-icon name="checkmark-done-outline" class="day-complete-tick" [style.visibility]="isDayComplete(day) ? 'visible' : 'hidden'"></ion-icon>
+          <ion-icon name="checkmark-circle" class="day-complete-tick" [style.visibility]="isDayComplete(day) ? 'visible' : 'hidden'"></ion-icon>
         </div>
 
         <div class="day-header-right">

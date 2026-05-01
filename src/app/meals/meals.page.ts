@@ -1,7 +1,9 @@
 import { Component, OnDestroy, OnInit, AfterViewChecked, ViewChildren, QueryList, ElementRef } from '@angular/core';
 import { Platform } from '@ionic/angular';
 import { Browser } from '@capacitor/browser';
+import { Share } from '@capacitor/share';
 import { Subscription } from 'rxjs';
+import * as LZString from 'lz-string';
 import { MealService } from './meal.service';
 import { TagService } from '../tags/tag.service';
 import { DbService } from '../shared/db.service';
@@ -184,6 +186,16 @@ export class MealsPage implements OnInit, OnDestroy, AfterViewChecked {
     const meal = this.tooltipMeal;
     this.closeTooltip();
     if (meal) this.openEditor(meal);
+  }
+
+  async shareMeal(): Promise<void> {
+    const meal = this.tooltipMeal;
+    if (!meal) return;
+    const compressed = LZString.compressToEncodedURIComponent(JSON.stringify(meal));
+    const url = `https://rubenmay1.github.io/menu_app/import-meal/?data=${compressed}`;
+    try {
+      await Share.share({ title: meal.name, url, dialogTitle: 'Share Meal' });
+    } catch { /* user cancelled */ }
   }
 
   // ---- Editor panel ----

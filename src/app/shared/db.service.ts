@@ -240,6 +240,45 @@ export class DbService {
     localStorage.setItem(`week-extras-${year}-${week}`, JSON.stringify(entries));
   }
 
+  // ---- Stats ----
+
+  getDataStats(): { totalSizeKb: number; mealCount: number; tagCount: number; weeksPlanned: number } {
+    const meals: Meal[] = JSON.parse(localStorage.getItem('meals') ?? '[]');
+    const tags: Tag[] = JSON.parse(localStorage.getItem('tags') ?? '[]');
+
+    // Count all localStorage chars (covers all keys, no UTF-16 double-counting)
+    let totalChars = 0;
+    for (let i = 0; i < localStorage.length; i++) {
+      const k = localStorage.key(i);
+      if (!k) continue;
+      totalChars += (k.length + (localStorage.getItem(k)?.length ?? 0)) * 2;
+    }
+
+    const weeksWithMeals = new Map<string, string[]>();
+    for (let i = 0; i < localStorage.length; i++) {
+      const key = localStorage.key(i);
+      if (!key || !key.startsWith('week-meals-')) continue;
+      const parts = key.split('-');
+      if (parts.length < 5) continue;
+      const weekKey = `${parts[2]}-${parts[3]}`;
+      const entries: WeekMealEntry[] = JSON.parse(localStorage.getItem(key) ?? '[]');
+      for (const e of entries) {
+        if (e.mealName && e.mealName !== '' && e.mealName !== '--' && e.mealName !== 'None') {
+          const existing = weeksWithMeals.get(weekKey) ?? [];
+          if (!existing.includes(e.mealName)) existing.push(e.mealName);
+          weeksWithMeals.set(weekKey, existing);
+        }
+      }
+    }
+
+    return {
+      totalSizeKb: Math.round(totalChars / 1024 * 10) / 10, // totalChars is bytes (UTF-16: length * 2)
+      mealCount: meals.length,
+      tagCount: tags.length,
+      weeksPlanned: weeksWithMeals.size,
+    };
+  }
+
   // ---- Reset ----
 
   resetAll(): void {

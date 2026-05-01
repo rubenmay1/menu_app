@@ -188,6 +188,10 @@
       <ng-template #noRecipe>
         <p class="recipe-tooltip-hint">No recipe added yet.</p>
       </ng-template>
+      <ion-button expand="block" fill="outline" (click)="shareMeal()">
+        <ion-icon slot="start" name="share-social-outline"></ion-icon>
+        Share this meal
+      </ion-button>
       <ion-button expand="block" fill="outline" (click)="editFromTooltip()">
         <ion-icon slot="start" name="create-outline"></ion-icon>
         Edit

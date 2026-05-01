@@ -12,6 +12,11 @@
       (currentWeek)="goToCurrentWeek()"
     ></app-week-nav>
 
+    <div class="plan-incomplete-warning" *ngIf="!isWeekComplete">
+      <ion-icon name="warning-outline"></ion-icon>
+      Plan is not complete yet
+    </div>
+
     <div class="list-container">
 
       <p class="empty-state" *ngIf="activeItems.length === 0 && doneItems.length === 0">

@@ -23,6 +23,11 @@ const routes: Routes = [
     pathMatch: 'full'
   },
   {
+    path: 'import-meal',
+    redirectTo: 'tabs',
+    pathMatch: 'full'
+  },
+  {
     path: 'view-plan',
     redirectTo: 'tabs',
     pathMatch: 'full'

@@ -6,10 +6,9 @@
     </ion-button>
   </div>
 
-  <div class="week-center" [class.week-center--static]="!showArrows" (click)="currentWeek.emit()">
+  <div class="week-center" [class.week-center--static]="!showArrows" [class.week-center--muted]="!isCurrentWeek" (click)="currentWeek.emit()">
     <span class="week-number">
       Week {{ isoWeek }}
-      <ion-icon *ngIf="isComplete" name="checkmark-done-outline" class="week-complete-tick"></ion-icon>
     </span>
     <span class="week-year">{{ year }}</span>
   </div>

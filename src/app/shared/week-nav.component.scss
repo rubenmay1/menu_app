@@ -34,6 +34,10 @@
     cursor: default;
     &:active { opacity: 1; }
   }
+
+  &--muted .week-number {
+    color: var(--ion-color-medium);
+  }
 }
 
 .week-number {
@@ -51,12 +55,6 @@
   font-size: 0.8rem;
   color: var(--ion-color-medium);
   font-weight: 400;
-}
-
-.week-complete-tick {
-  font-size: 1.3rem;
-  color: rgb(255, 255, 255);
-  display: block;
 }
 
 .week-action-group {
