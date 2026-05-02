@@ -202,6 +202,9 @@ export class AppComponent implements OnInit {
 
   private showSyncPrompt(): void {
     const last = this.dropbox.getLastSyncTime();
+    const sevenDaysMs = 7 * 24 * 60 * 60 * 1000;
+    const overdue = !last || (Date.now() - last.getTime()) >= sevenDaysMs;
+    if (!overdue) return;
     this.syncPromptMessage = last
       ? `Last backed up: ${last.toLocaleString()}`
       : 'You have not backed up yet.';
