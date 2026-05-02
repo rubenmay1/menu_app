@@ -24,4 +24,26 @@ export class WeekNavComponent {
     const today = new Date();
     return this.isoWeek === getISOWeek(today) && this.year === getISOWeekYear(today);
   }
+
+  get weekLabel(): string {
+    const today = new Date();
+    if (this.isoWeek === getISOWeek(today) && this.year === getISOWeekYear(today)) {
+      return 'Current Week';
+    }
+    const prev = new Date(today);
+    prev.setDate(today.getDate() - 7);
+    if (this.isoWeek === getISOWeek(prev) && this.year === getISOWeekYear(prev)) {
+      return 'Last Week';
+    }
+    const next = new Date(today);
+    next.setDate(today.getDate() + 7);
+    if (this.isoWeek === getISOWeek(next) && this.year === getISOWeekYear(next)) {
+      return 'Next Week';
+    }
+    return `Week ${this.isoWeek}`;
+  }
+
+  get showYear(): boolean {
+    return this.weekLabel.startsWith('Week');
+  }
 }

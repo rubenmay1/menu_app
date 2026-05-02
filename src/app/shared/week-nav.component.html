@@ -7,19 +7,17 @@
   </div>
 
   <div class="week-center" [class.week-center--static]="!showArrows" [class.week-center--muted]="!isCurrentWeek" (click)="currentWeek.emit()">
-    <span class="week-number">
-      Week {{ isoWeek }}
-    </span>
-    <span class="week-year">{{ year }}</span>
+    <span class="week-number">{{ weekLabel }}</span>
+    <span class="week-year" *ngIf="showYear">{{ year }}</span>
   </div>
 
   <div class="week-side week-side--right">
     <div *ngIf="showShare || showClear" class="week-action-group">
-      <button *ngIf="showShare" class="week-icon-btn" (click)="share.emit()">
-        <ion-icon name="share-social-outline"></ion-icon>
-      </button>
       <button *ngIf="showClear" class="week-icon-btn" (click)="clearWeek.emit()">
         <ion-icon name="trash-outline"></ion-icon>
+      </button>
+      <button *ngIf="showShare" class="week-icon-btn" (click)="share.emit()">
+        <ion-icon name="share-social-outline"></ion-icon>
       </button>
     </div>
     <ion-button fill="clear" *ngIf="showArrows" (click)="nextWeek.emit()">
