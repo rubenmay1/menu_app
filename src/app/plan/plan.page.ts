@@ -60,6 +60,9 @@ export class PlanPage implements OnInit, OnDestroy, AfterViewInit, AfterViewChec
   snowTooltipFading = false;
   private snowTooltipTimer: ReturnType<typeof setTimeout> | null = null;
 
+  pickerSearchQuery: string = '';
+  extrasPickerSearchQuery: string = '';
+
   extrasEntries: ExtraEntry[] = [];
   extrasPickerVisible: boolean = false;
   extrasPickerMode: 'default' | 'custom' = 'default';
@@ -513,6 +516,7 @@ export class PlanPage implements OnInit, OnDestroy, AfterViewInit, AfterViewChec
       return a.name.localeCompare(b.name);
     });
     this.allPickerMeals = sorted;
+    this.pickerSearchQuery = '';
     this.pickerFilterActive = true;
     if (item.tagIds.length > 0) {
       this.pickerMeals = sorted.filter(m => m.tagIds.length === 0 || m.tagIds.some(tid => item.tagIds.includes(tid)));
@@ -536,6 +540,9 @@ export class PlanPage implements OnInit, OnDestroy, AfterViewInit, AfterViewChec
 
   togglePickerFilter(): void {
     this.pickerFilterActive = !this.pickerFilterActive;
+    if (this.pickerFilterActive) {
+      this.pickerSearchQuery = '';
+    }
     const item = this.itemPopupItem;
     if (this.pickerFilterActive && item && item.tagIds.length > 0) {
       this.pickerMeals = this.allPickerMeals.filter(m =>
@@ -545,6 +552,33 @@ export class PlanPage implements OnInit, OnDestroy, AfterViewInit, AfterViewChec
       this.pickerMeals = this.allPickerMeals;
     }
     this.pickerOverflowSvc.init(this.pickerMeals.map(m => m.id));
+  }
+
+  onPickerSearchInput(ev: Event): void {
+    this.pickerSearchQuery = (ev as CustomEvent).detail.value ?? '';
+    const q = this.pickerSearchQuery.toLowerCase().trim();
+    if (q) {
+      this.pickerFilterActive = false;
+      this.pickerMeals = this.allPickerMeals.filter(m => m.name.toLowerCase().includes(q));
+    } else {
+      const item = this.itemPopupItem;
+      if (this.pickerFilterActive && item && item.tagIds.length > 0) {
+        this.pickerMeals = this.allPickerMeals.filter(m =>
+          m.tagIds.length === 0 || m.tagIds.some(tid => item.tagIds.includes(tid))
+        );
+      } else {
+        this.pickerMeals = [...this.allPickerMeals];
+      }
+    }
+    this.pickerOverflowSvc.init(this.pickerMeals.map(m => m.id));
+  }
+
+  onExtrasPickerSearchInput(ev: Event): void {
+    this.extrasPickerSearchQuery = (ev as CustomEvent).detail.value ?? '';
+    const q = this.extrasPickerSearchQuery.toLowerCase().trim();
+    this.pickerMeals = q
+      ? this.allPickerMeals.filter(m => m.name.toLowerCase().includes(q))
+      : [...this.allPickerMeals];
   }
 
   async setNone(): Promise<void> {
@@ -601,12 +635,15 @@ export class PlanPage implements OnInit, OnDestroy, AfterViewInit, AfterViewChec
     ]);
     this.mealUsageCounts = usageCounts;
     this.mealLastUsedDates = lastUsed;
-    this.pickerMeals = meals.sort((a, b) => {
+    const sorted = meals.sort((a, b) => {
       const ua = usageCounts.get(a.name) ?? 0;
       const ub = usageCounts.get(b.name) ?? 0;
       if (ub !== ua) return ub - ua;
       return a.name.localeCompare(b.name);
     });
+    this.allPickerMeals = sorted;
+    this.pickerMeals = [...sorted];
+    this.extrasPickerSearchQuery = '';
     this.extrasPickerMode = 'default';
     this.extrasCustomName = '';
     this.extrasCustomStarred = false;

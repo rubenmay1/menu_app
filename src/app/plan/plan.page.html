@@ -156,6 +156,14 @@
       <!-- Default mode -->
       <ng-container *ngIf="pickerMode === 'default'">
 
+        <ion-searchbar
+          [value]="pickerSearchQuery"
+          (ionInput)="onPickerSearchInput($event)"
+          placeholder="Search meals…"
+          [debounce]="0"
+          class="picker-searchbar"
+        ></ion-searchbar>
+
         <div class="picker-meals-section">
           <div class="picker-meals-header">
             <p class="picker-section-label">From Meals</p>
@@ -279,6 +287,15 @@
 
       <!-- Default mode -->
       <ng-container *ngIf="extrasPickerMode === 'default'">
+
+        <ion-searchbar
+          [value]="extrasPickerSearchQuery"
+          (ionInput)="onExtrasPickerSearchInput($event)"
+          placeholder="Search meals…"
+          [debounce]="0"
+          class="picker-searchbar"
+        ></ion-searchbar>
+
         <div class="picker-meals-section">
           <div class="picker-meals-header">
             <p class="picker-section-label">From Meals</p>
