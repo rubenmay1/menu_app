@@ -1,5 +1,5 @@
-import { Component, OnInit, OnDestroy } from '@angular/core';
-import { Platform } from '@ionic/angular';
+import { Component, OnInit, OnDestroy, ViewChild } from '@angular/core';
+import { IonSearchbar, Platform } from '@ionic/angular';
 import { Subscription } from 'rxjs';
 import { TagService } from './tag.service';
 import { DbService } from '../shared/db.service';
@@ -13,6 +13,8 @@ import { PRESET_COLORS } from '../plan/plan.models';
   styleUrls: ['./tags.page.scss']
 })
 export class TagsPage implements OnInit, OnDestroy {
+
+  @ViewChild(IonSearchbar) private searchbar?: IonSearchbar;
 
   tags: Tag[] = [];
   filteredTags: Tag[] = [];
@@ -63,6 +65,9 @@ export class TagsPage implements OnInit, OnDestroy {
   ionViewWillLeave(): void {
     this.backButtonSub?.unsubscribe();
     this.backButtonSub = null;
+    this.searchQuery = '';
+    if (this.searchbar) this.searchbar.value = '';
+    this.applyFilter();
   }
 
   private async reload(): Promise<void> {

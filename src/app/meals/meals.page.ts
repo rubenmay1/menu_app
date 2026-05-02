@@ -1,5 +1,5 @@
-import { Component, OnDestroy, OnInit, AfterViewChecked, ViewChildren, QueryList, ElementRef } from '@angular/core';
-import { Platform } from '@ionic/angular';
+import { Component, OnDestroy, OnInit, AfterViewChecked, ViewChildren, ViewChild, QueryList, ElementRef } from '@angular/core';
+import { IonSearchbar, Platform } from '@ionic/angular';
 import { Browser } from '@capacitor/browser';
 import { Share } from '@capacitor/share';
 import { Subscription } from 'rxjs';
@@ -21,6 +21,7 @@ import { ComponentOverflowService } from '../shared/component-overflow.service';
 export class MealsPage implements OnInit, OnDestroy, AfterViewChecked {
 
   @ViewChildren('mealNameEl') private mealNameEls!: QueryList<ElementRef>;
+  @ViewChild(IonSearchbar) private searchbar?: IonSearchbar;
 
   meals: Meal[] = [];
   filteredMeals: Meal[] = [];
@@ -95,6 +96,9 @@ export class MealsPage implements OnInit, OnDestroy, AfterViewChecked {
   ionViewWillLeave(): void {
     this.backButtonSub?.unsubscribe();
     this.backButtonSub = null;
+    this.searchQuery = '';
+    if (this.searchbar) this.searchbar.value = '';
+    this.applySearch();
   }
 
   private async reload(): Promise<void> {
