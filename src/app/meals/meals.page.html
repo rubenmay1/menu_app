@@ -176,9 +176,9 @@
   </div>
 
   <!-- Recipe tooltip -->
-  <div class="recipe-backdrop" *ngIf="tooltipVisible" (click)="closeTooltip()">
-    <div class="recipe-tooltip" (click)="$event.stopPropagation()">
-      <p class="recipe-tooltip-name">{{ tooltipMeal?.name }}</p>
+  <div class="action-backdrop" *ngIf="tooltipVisible" (click)="closeTooltip()">
+    <div class="action-popup" (click)="$event.stopPropagation()">
+      <p class="action-popup-title">{{ tooltipMeal?.name }}</p>
       <ng-container *ngIf="tooltipMeal?.recipeUrl; else noRecipe">
         <ion-button expand="block" (click)="openRecipe()">
           <ion-icon slot="start" name="open-outline"></ion-icon>
@@ -186,7 +186,7 @@
         </ion-button>
       </ng-container>
       <ng-template #noRecipe>
-        <p class="recipe-tooltip-hint">No recipe added yet.</p>
+        <p class="action-popup-hint">No recipe added yet.</p>
       </ng-template>
       <ion-button expand="block" fill="outline" (click)="shareMeal()">
         <ion-icon slot="start" name="share-social-outline"></ion-icon>

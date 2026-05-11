@@ -14,9 +14,13 @@ if ($gradleContent -match 'versionCode\s+(\d+)') {
 if ($gradleContent -match 'versionName\s+"([^"]+)"') {
     $oldName = $Matches[1]
     $parts = $oldName -split '\.'
-    $parts[-1] = [string]([int]$parts[-1] + 1)
-    $newName = $parts -join '.'
-    $gradleContent = $gradleContent -replace "versionName\s+`"$oldName`"", "versionName `"$newName`""
+    if ($parts.Count -ge 2) {
+        $newMinor = [int]$parts[1] + 1
+        $newName = "$($parts[0]).$newMinor"
+    } else {
+        $newName = "$oldName.1"
+    }
+    $gradleContent = $gradleContent -replace "versionName\s+`"$([regex]::Escape($oldName))`"", "versionName `"$newName`""
 }
 
 [System.IO.File]::WriteAllText((Resolve-Path $gradlePath), $gradleContent, [System.Text.UTF8Encoding]::new($false))

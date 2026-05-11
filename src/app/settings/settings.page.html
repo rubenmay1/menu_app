@@ -76,6 +76,16 @@
   </div>
 
   <div class="section">
+    <div class="section-label">Plan</div>
+    <div class="card-tabs-toggle">
+      <ion-item lines="none" class="toggle-item">
+        <span class="toggle-title">Coloured Cards</span>
+        <ion-toggle slot="end" [checked]="colouredCards" (ionChange)="onColouredCardsChange($event)"></ion-toggle>
+      </ion-item>
+    </div>
+  </div>
+
+  <div class="section">
     <div class="section-label">Meal Picker</div>
     <div class="card">
       <p class="hint">Show a snowflake icon for meals not used within this many weeks.</p>

@@ -40,4 +40,9 @@
 
   </ng-container>
 
+  <button class="undo-fab" [class.undo-fab--fading]="undoFading" *ngIf="lastToggledItem" (click)="undoLastToggle()" slot="fixed">
+    <ion-icon name="arrow-undo-outline"></ion-icon>
+    Undo
+  </button>
+
 </ion-content>

@@ -1,6 +1,7 @@
 import { Component, OnInit, OnDestroy, AfterViewInit, AfterViewChecked, ViewChild, ViewChildren, QueryList, ElementRef } from '@angular/core';
 import { Router } from '@angular/router';
 import { IonContent, Platform } from '@ionic/angular';
+import { Browser } from '@capacitor/browser';
 import { Share } from '@capacitor/share';
 import * as LZString from 'lz-string';
 import { Subscription } from 'rxjs';
@@ -68,6 +69,11 @@ export class PlanPage implements OnInit, OnDestroy, AfterViewInit, AfterViewChec
   extrasPickerMode: 'default' | 'custom' = 'default';
   extrasCustomName: string = '';
   extrasCustomStarred: boolean = false;
+
+  mealActionVisible: boolean = false;
+  mealActionItem: ResolvedMenuItem | null = null;
+  mealActionDayIndex: number = -1;
+  mealActionMeal: Meal | null = null;
 
   readMode = false;
   clearWeekPromptVisible = false;
@@ -159,6 +165,8 @@ export class PlanPage implements OnInit, OnDestroy, AfterViewInit, AfterViewChec
     this.backButtonSub = this.platform.backButton.subscribeWithPriority(10, (processNextHandler) => {
       if (this.clearWeekPromptVisible) {
         this.onClearWeekCancel();
+      } else if (this.mealActionVisible) {
+        this.closeMealActionPopup();
       } else if (this.extrasPickerVisible) {
         if (this.extrasPickerMode === 'custom') { this.extrasPickerMode = 'default'; }
         else { this.closeExtrasPicker(); }
@@ -183,6 +191,16 @@ export class PlanPage implements OnInit, OnDestroy, AfterViewInit, AfterViewChec
 
   isDayComplete(day: DayEntry): boolean {
     return day.items.length > 0 && day.items.every(item => !!(item.mealName?.trim()));
+  }
+
+  getDayStatus(day: DayEntry): 'past' | 'today' | 'future' {
+    if (!this.prefs.colouredCards) return 'future';
+    const now = new Date();
+    const todayTime = Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate());
+    const dayTime = day.date.getTime();
+    if (dayTime < todayTime) return 'past';
+    if (dayTime === todayTime) return 'today';
+    return 'future';
   }
 
   private resolveDay(day: DayEntry): DayEntry {
@@ -417,7 +435,11 @@ export class PlanPage implements OnInit, OnDestroy, AfterViewInit, AfterViewChec
       this.itemLongPressActive = false;
       return;
     }
-    void this.openItemPopup(item, dayIndex);
+    if (item.mealName && item.mealName !== 'None') {
+      void this.openMealActionPopup(item, dayIndex);
+    } else {
+      void this.openItemPopup(item, dayIndex);
+    }
   }
 
   openDayEditor(dayIndex: number): void {
@@ -583,7 +605,7 @@ export class PlanPage implements OnInit, OnDestroy, AfterViewInit, AfterViewChec
 
   async setNone(): Promise<void> {
     if (!this.itemPopupItem) return;
-    await this.saveItemUpdate({ mealName: 'None' });
+    await this.saveItemUpdate(this.itemPopupItem, this.itemPopupDayIndex, { mealName: 'None' });
     this.closeItemPopup();
   }
 
@@ -608,7 +630,7 @@ export class PlanPage implements OnInit, OnDestroy, AfterViewInit, AfterViewChec
         ingredients: []
       });
     }
-    await this.saveItemUpdate({ mealName: name });
+    await this.saveItemUpdate(this.itemPopupItem, this.itemPopupDayIndex, { mealName: name });
     this.closeItemPopup();
   }
 
@@ -623,7 +645,7 @@ export class PlanPage implements OnInit, OnDestroy, AfterViewInit, AfterViewChec
 
   async selectMeal(meal: Meal): Promise<void> {
     if (!this.itemPopupItem) return;
-    await this.saveItemUpdate({ mealName: meal.name });
+    await this.saveItemUpdate(this.itemPopupItem, this.itemPopupDayIndex, { mealName: meal.name });
     this.closeItemPopup();
   }
 
@@ -725,9 +747,42 @@ export class PlanPage implements OnInit, OnDestroy, AfterViewInit, AfterViewChec
     await this.planService.setExtras(year, isoWeek, this.extrasEntries);
   }
 
-  private async saveItemUpdate(changes: { mealName?: string }): Promise<void> {
-    const item = this.itemPopupItem!;
-    const dayIndex = this.itemPopupDayIndex;
+  async openMealActionPopup(item: ResolvedMenuItem, dayIndex: number): Promise<void> {
+    this.mealActionItem = item;
+    this.mealActionDayIndex = dayIndex;
+    const meals = await this.mealService.getMeals();
+    this.mealActionMeal = meals.find(m => m.name === item.mealName) ?? null;
+    this.mealActionVisible = true;
+  }
+
+  closeMealActionPopup(): void {
+    this.mealActionVisible = false;
+    this.mealActionItem = null;
+    this.mealActionDayIndex = -1;
+    this.mealActionMeal = null;
+  }
+
+  async mealActionChange(): Promise<void> {
+    const item = this.mealActionItem!;
+    const dayIndex = this.mealActionDayIndex;
+    this.closeMealActionPopup();
+    await this.openItemPopup(item, dayIndex);
+  }
+
+  async mealActionRemove(): Promise<void> {
+    const item = this.mealActionItem!;
+    const dayIndex = this.mealActionDayIndex;
+    this.closeMealActionPopup();
+    await this.saveItemUpdate(item, dayIndex, { mealName: undefined });
+  }
+
+  async mealActionGoToRecipe(): Promise<void> {
+    const url = this.mealActionMeal?.recipeUrl;
+    if (!url) return;
+    await Browser.open({ url });
+  }
+
+  private async saveItemUpdate(item: ResolvedMenuItem, dayIndex: number, changes: { mealName?: string }): Promise<void> {
     const { year, isoWeek } = this.week;
     const entries = await this.planService.getWeekMeals(year, isoWeek, dayIndex);
     const idx = entries.findIndex(e => e.itemId === item.id);

@@ -26,6 +26,9 @@ export class PreferenceService {
   get showTags(): boolean  { return this.read('pref-show-tags'); }
   set showTags(v: boolean) { this.write('pref-show-tags', v); }
 
+  get colouredCards(): boolean  { return localStorage.getItem('pref-coloured-cards') === 'true'; }
+  set colouredCards(v: boolean) { this.write('pref-coloured-cards', v); }
+
   get frozenThresholdWeeks(): number {
     const v = localStorage.getItem('pref-frozen-threshold-weeks');
     return v !== null ? Math.max(1, parseInt(v, 10)) : 4;

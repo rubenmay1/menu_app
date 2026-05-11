@@ -28,7 +28,7 @@ export class WeekNavComponent {
   get weekLabel(): string {
     const today = new Date();
     if (this.isoWeek === getISOWeek(today) && this.year === getISOWeekYear(today)) {
-      return 'Current Week';
+      return 'This Week';
     }
     const prev = new Date(today);
     prev.setDate(today.getDate() - 7);

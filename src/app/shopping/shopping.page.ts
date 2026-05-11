@@ -32,6 +32,9 @@ export class ShoppingPage implements OnDestroy, AfterViewInit {
   isWeekComplete = false;
   activeItems: ShoppingItem[] = [];
   doneItems: ShoppingItem[] = [];
+  lastToggledItem: ShoppingItem | null = null;
+  undoFading = false;
+  private undoTimer: ReturnType<typeof setTimeout> | null = null;
 
   private dataChangedSub!: Subscription;
 
@@ -90,6 +93,9 @@ export class ShoppingPage implements OnDestroy, AfterViewInit {
   private async loadWeek(year: number, isoWeek: number): Promise<void> {
     this.weekState.setWeek(year, isoWeek);
     this.week = { year, isoWeek };
+    this.lastToggledItem = null;
+    this.undoFading = false;
+    if (this.undoTimer !== null) { clearTimeout(this.undoTimer); this.undoTimer = null; }
     const meals = await this.mealService.getMeals();
     const mealByName = new Map<string, Meal>(meals.map(m => [m.name.toLowerCase(), m]));
     const doneKeys = this.loadDoneKeys(year, isoWeek);
@@ -156,6 +162,30 @@ export class ShoppingPage implements OnDestroy, AfterViewInit {
   }
 
   toggleItem(item: ShoppingItem): void {
+    this.lastToggledItem = item;
+    this.applyToggle(item);
+    this.undoFading = false;
+    if (this.undoTimer !== null) clearTimeout(this.undoTimer);
+    this.undoTimer = setTimeout(() => {
+      this.undoFading = true;
+      this.undoTimer = setTimeout(() => {
+        this.lastToggledItem = null;
+        this.undoFading = false;
+        this.undoTimer = null;
+      }, 400);
+    }, 4600);
+  }
+
+  undoLastToggle(): void {
+    const item = this.lastToggledItem;
+    if (!item) return;
+    if (this.undoTimer !== null) { clearTimeout(this.undoTimer); this.undoTimer = null; }
+    this.lastToggledItem = null;
+    this.undoFading = false;
+    this.applyToggle(item);
+  }
+
+  private applyToggle(item: ShoppingItem): void {
     item.done = !item.done;
     const doneKeys = this.loadDoneKeys(this.week!.year, this.week!.isoWeek);
     if (item.done) {

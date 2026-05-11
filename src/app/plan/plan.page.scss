@@ -30,6 +30,9 @@
   background: var(--surface-1);
   border-radius: 12px;
   overflow: hidden;
+
+  &--past  { background: rgb(50, 22, 22); }
+  &--today { background: rgb(22, 50, 26); }
 }
 
 .day-header {

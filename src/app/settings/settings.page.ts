@@ -143,6 +143,9 @@ export class SettingsPage implements OnDestroy {
   onShowMealsChange(event: Event): void  { this.prefs.showMeals  = (event as CustomEvent).detail.checked; }
   onShowTagsChange(event: Event): void   { this.prefs.showTags   = (event as CustomEvent).detail.checked; }
 
+  get colouredCards(): boolean { return this.prefs.colouredCards; }
+  onColouredCardsChange(event: Event): void { this.prefs.colouredCards = (event as CustomEvent).detail.checked; }
+
   get frozenThresholdWeeks(): number { return this.prefs.frozenThresholdWeeks; }
   incrementFrozenThreshold(): void { this.prefs.frozenThresholdWeeks = this.prefs.frozenThresholdWeeks + 1; }
   decrementFrozenThreshold(): void { this.prefs.frozenThresholdWeeks = this.prefs.frozenThresholdWeeks - 1; }

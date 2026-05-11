@@ -122,43 +122,6 @@
   flex-shrink: 0;
 }
 
-.recipe-backdrop {
-  position: fixed;
-  inset: 0;
-  background: rgba(0, 0, 0, 0.6);
-  z-index: 2000;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  padding: 24px;
-}
-
-.recipe-tooltip {
-  background: var(--surface-2);
-  border-radius: 12px;
-  padding: 24px 20px 20px;
-  width: 100%;
-  max-width: 320px;
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-}
-
-.recipe-tooltip-name {
-  font-family: 'Inter', sans-serif;
-  font-weight: 600;
-  font-size: 1rem;
-  text-align: center;
-  margin-bottom: 6px;
-}
-
-.recipe-tooltip-hint {
-  font-family: 'Inter', sans-serif;
-  font-size: 0.875rem;
-  color: var(--ion-color-medium);
-  text-align: center;
-  margin: 6px;
-}
 
 .ing-backdrop {
   position: fixed;

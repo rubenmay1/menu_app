@@ -22,7 +22,10 @@
     [class.slide-from-left]="slideDir === 'left'"
     [class.day-list--read-mode]="readMode"
   >
-    <div class="day-card" *ngFor="let day of week.days; let i = index">
+    <div class="day-card"
+      [class.day-card--past]="getDayStatus(day) === 'past'"
+      [class.day-card--today]="getDayStatus(day) === 'today'"
+      *ngFor="let day of week.days; let i = index">
 
       <div class="day-header"
         (pointerdown)="onDayPointerDown(i)"
@@ -97,6 +100,25 @@
   </div>
 
   </ng-container>
+
+  <!-- Meal action popup (tap on filled slot) -->
+  <div class="action-backdrop" *ngIf="mealActionVisible" (click)="closeMealActionPopup()">
+    <div class="action-popup" (click)="$event.stopPropagation()">
+      <p class="action-popup-title">{{ mealActionItem?.mealName }}</p>
+      <ion-button *ngIf="mealActionMeal?.recipeUrl" expand="block" (click)="mealActionGoToRecipe()">
+        <ion-icon slot="start" name="open-outline"></ion-icon>
+        Go to Recipe
+      </ion-button>
+      <ion-button expand="block" fill="outline" (click)="mealActionChange()">
+        <ion-icon slot="start" name="swap-horizontal-outline"></ion-icon>
+        Change
+      </ion-button>
+      <ion-button expand="block" fill="outline" class="btn-delete" (click)="mealActionRemove()">
+        <ion-icon slot="start" name="trash-outline"></ion-icon>
+        Remove
+      </ion-button>
+    </div>
+  </div>
 
   <!-- Clear week confirmation -->
   <div class="sync-backdrop" *ngIf="clearWeekPromptVisible" (click)="onClearWeekCancel()">
