@@ -2,11 +2,15 @@ export interface SubMenu {
   id: string;
   name: string;
   tagIds: string[];
+  mealTime?: string;
 }
 
 export interface WeekMealEntry {
   itemId: string;
   mealName?: string;
+  mealId?: string;
+  notificationId?: number;
+  notificationTime?: number;
 }
 
 // Combined view: SubMenu merged with its WeekMealEntry for a given week
@@ -14,14 +18,20 @@ export interface MenuItem {
   id: string;
   name: string;
   tagIds: string[];
+  mealTime?: string;
   mealName?: string;
+  mealId?: string;
+  notificationId?: number;
 }
 
 export interface ResolvedMenuItem {
   id: string;
   name: string;
   tagIds: string[];
+  mealTime?: string;
   mealName?: string;
+  mealId?: string;
+  notificationId?: number;
   resolvedTags: { id: string; name: string; color: string }[];
 }
 
@@ -42,6 +52,9 @@ export interface WeekState {
 export interface ExtraEntry {
   id: string;
   mealName: string;
+  mealId?: string;
+  notificationId?: number;
+  notificationTime?: number;
 }
 
 // ---- Shared / read-only plan link ----

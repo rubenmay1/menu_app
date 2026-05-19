@@ -19,6 +19,42 @@ export class DbService {
 
   async initialize(): Promise<void> {
     this.seedDefaultsIfNeeded();
+    this.backfillMealIds();
+  }
+
+  // Before this change, WeekMealEntry and ExtraEntry stored only mealName (string) with no reference
+  // to the meal's id, so renaming a meal silently broke all plan links. This backfill runs once on
+  // startup to populate mealId on existing entries by matching on name. Safe to delete after 2027-05-14.
+  private backfillMealIds(): void {
+    const meals: Meal[] = JSON.parse(localStorage.getItem('meals') ?? '[]');
+    if (meals.length === 0) return;
+    const byName = new Map(meals.map(m => [m.name, m.id]));
+
+    for (let i = 0; i < localStorage.length; i++) {
+      const key = localStorage.key(i);
+      if (!key) continue;
+      if (key.startsWith('week-meals-')) {
+        const entries: WeekMealEntry[] = JSON.parse(localStorage.getItem(key) ?? '[]');
+        let changed = false;
+        for (const entry of entries) {
+          if (!entry.mealId && entry.mealName) {
+            const id = byName.get(entry.mealName);
+            if (id) { entry.mealId = id; changed = true; }
+          }
+        }
+        if (changed) localStorage.setItem(key, JSON.stringify(entries));
+      } else if (key.startsWith('week-extras-')) {
+        const entries: ExtraEntry[] = JSON.parse(localStorage.getItem(key) ?? '[]');
+        let changed = false;
+        for (const entry of entries) {
+          if (!entry.mealId && entry.mealName) {
+            const id = byName.get(entry.mealName);
+            if (id) { entry.mealId = id; changed = true; }
+          }
+        }
+        if (changed) localStorage.setItem(key, JSON.stringify(entries));
+      }
+    }
   }
 
   private seedDefaultsIfNeeded(): void {
@@ -71,8 +107,40 @@ export class DbService {
   async saveMeal(meal: Meal): Promise<void> {
     const meals: Meal[] = JSON.parse(localStorage.getItem('meals') ?? '[]');
     const idx = meals.findIndex(m => m.id === meal.id);
+    const oldName = idx >= 0 ? meals[idx].name : null;
     if (idx >= 0) meals[idx] = meal; else meals.push(meal);
     localStorage.setItem('meals', JSON.stringify(meals));
+    if (oldName !== null && oldName !== meal.name) {
+      this.propagateMealRename(meal.id, meal.name);
+    }
+  }
+
+  private propagateMealRename(mealId: string, newName: string): void {
+    for (let i = 0; i < localStorage.length; i++) {
+      const key = localStorage.key(i);
+      if (!key) continue;
+      if (key.startsWith('week-meals-')) {
+        const entries: WeekMealEntry[] = JSON.parse(localStorage.getItem(key) ?? '[]');
+        let changed = false;
+        for (const entry of entries) {
+          if (entry.mealId === mealId && entry.mealName !== newName) {
+            entry.mealName = newName;
+            changed = true;
+          }
+        }
+        if (changed) localStorage.setItem(key, JSON.stringify(entries));
+      } else if (key.startsWith('week-extras-')) {
+        const entries: ExtraEntry[] = JSON.parse(localStorage.getItem(key) ?? '[]');
+        let changed = false;
+        for (const entry of entries) {
+          if (entry.mealId === mealId && entry.mealName !== newName) {
+            entry.mealName = newName;
+            changed = true;
+          }
+        }
+        if (changed) localStorage.setItem(key, JSON.stringify(entries));
+      }
+    }
   }
 
   async deleteMeal(id: string): Promise<void> {
@@ -88,16 +156,14 @@ export class DbService {
       if (key.startsWith('week-meals-')) {
         const entries: WeekMealEntry[] = JSON.parse(localStorage.getItem(key) ?? '[]');
         for (const entry of entries) {
-          if (entry.mealName && entry.mealName !== '' && entry.mealName !== '--' && entry.mealName !== 'None') {
-            map.set(entry.mealName, (map.get(entry.mealName) ?? 0) + 1);
-          }
+          const mapKey = entry.mealId ?? (entry.mealName && entry.mealName !== '' && entry.mealName !== '--' && entry.mealName !== 'None' ? entry.mealName : null);
+          if (mapKey) map.set(mapKey, (map.get(mapKey) ?? 0) + 1);
         }
       } else if (key.startsWith('week-extras-')) {
         const entries: ExtraEntry[] = JSON.parse(localStorage.getItem(key) ?? '[]');
         for (const entry of entries) {
-          if (entry.mealName) {
-            map.set(entry.mealName, (map.get(entry.mealName) ?? 0) + 1);
-          }
+          const mapKey = entry.mealId ?? (entry.mealName || null);
+          if (mapKey) map.set(mapKey, (map.get(mapKey) ?? 0) + 1);
         }
       }
     }
@@ -118,10 +184,11 @@ export class DbService {
         if (isNaN(year) || isNaN(isoWeek)) continue;
         const entries: WeekMealEntry[] = JSON.parse(localStorage.getItem(key) ?? '[]');
         for (const entry of entries) {
-          if (!entry.mealName || entry.mealName === '' || entry.mealName === '--' || entry.mealName === 'None') continue;
-          const existing = weekMap.get(entry.mealName);
+          const mapKey = entry.mealId ?? (entry.mealName && entry.mealName !== '' && entry.mealName !== '--' && entry.mealName !== 'None' ? entry.mealName : null);
+          if (!mapKey) continue;
+          const existing = weekMap.get(mapKey);
           if (!existing || year > existing.year || (year === existing.year && isoWeek > existing.isoWeek)) {
-            weekMap.set(entry.mealName, { year, isoWeek });
+            weekMap.set(mapKey, { year, isoWeek });
           }
         }
       } else if (key.startsWith('week-extras-')) {
@@ -131,18 +198,19 @@ export class DbService {
         if (isNaN(year) || isNaN(isoWeek)) continue;
         const entries: ExtraEntry[] = JSON.parse(localStorage.getItem(key) ?? '[]');
         for (const entry of entries) {
-          if (!entry.mealName) continue;
-          const existing = weekMap.get(entry.mealName);
+          const mapKey = entry.mealId ?? (entry.mealName || null);
+          if (!mapKey) continue;
+          const existing = weekMap.get(mapKey);
           if (!existing || year > existing.year || (year === existing.year && isoWeek > existing.isoWeek)) {
-            weekMap.set(entry.mealName, { year, isoWeek });
+            weekMap.set(mapKey, { year, isoWeek });
           }
         }
       }
     }
 
     const dateMap = new Map<string, Date>();
-    for (const [name, { year, isoWeek }] of weekMap) {
-      dateMap.set(name, getMondayOfISOWeek(year, isoWeek));
+    for (const [id, { year, isoWeek }] of weekMap) {
+      dateMap.set(id, getMondayOfISOWeek(year, isoWeek));
     }
     return dateMap;
   }

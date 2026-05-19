@@ -25,6 +25,7 @@
     <div class="day-card"
       [class.day-card--past]="getDayStatus(day) === 'past'"
       [class.day-card--today]="getDayStatus(day) === 'today'"
+      [class.day-card--future]="colouredCards && getDayStatus(day) === 'future'"
       *ngFor="let day of week.days; let i = index">
 
       <div class="day-header"
@@ -60,7 +61,7 @@
                 #mealNameEl
                 [attr.data-item-id]="item.id"
                 [class.item-meal-name--two-lines]="!item.resolvedTags.length || overflowSvc.getStage(item.id) >= 3"
-          >{{ item.mealName }}</span>
+          >{{ item.mealName }}<ion-icon *ngIf="item.notificationId" name="notifications-outline" class="meal-reminder-icon"></ion-icon></span>
           <div class="item-tags" *ngIf="item.resolvedTags?.length">
             <ng-container *ngFor="let t of item.resolvedTags; let ti = index">
               <app-tag-pill
@@ -80,16 +81,14 @@
     </div>
 
     <!-- Extras card -->
-    <div class="day-card">
+    <div class="day-card" [class.day-card--future]="colouredCards">
       <div class="day-header extras-header">
         <span class="day-name">Extras</span>
       </div>
       <div class="item-list">
-        <div class="menu-item extras-item" *ngFor="let entry of extrasEntries">
-          <span class="extras-meal-name">{{ entry.mealName }}</span>
-          <button class="extras-remove-btn" *ngIf="!readMode" (click)="removeExtra(entry.id); $event.stopPropagation()">
-            <ion-icon name="close-outline"></ion-icon>
-          </button>
+        <div class="menu-item extras-item" *ngFor="let entry of extrasEntries"
+             (click)="!readMode && openExtrasAction(entry)">
+          <span class="extras-meal-name">{{ entry.mealName }}<ion-icon *ngIf="entry.notificationId" name="notifications-outline" class="extras-reminder-icon"></ion-icon></span>
         </div>
         <div class="menu-item extras-add-row" *ngIf="!readMode" (click)="openExtrasPicker()">
           <em>Add other meals…</em>
@@ -113,10 +112,84 @@
         <ion-icon slot="start" name="swap-horizontal-outline"></ion-icon>
         Change
       </ion-button>
+      <ion-button *ngIf="canSetMealReminder() && !mealActionItem?.notificationId" expand="block" fill="outline"
+                  (click)="openRemindPopup(mealActionItem!, mealActionDayIndex)">
+        <ion-icon slot="start" name="notifications-outline"></ion-icon>
+        Remind Me!
+      </ion-button>
+      <ion-button *ngIf="mealActionItem?.notificationId" expand="block" fill="outline"
+                  (click)="cancelMealReminder()">
+        <ion-icon slot="start" name="notifications-off-outline"></ion-icon>
+        Cancel Reminder
+      </ion-button>
       <ion-button expand="block" fill="outline" class="btn-delete" (click)="mealActionRemove()">
         <ion-icon slot="start" name="trash-outline"></ion-icon>
         Remove
       </ion-button>
+    </div>
+  </div>
+
+  <!-- Remind popup (meal slot) -->
+  <div class="action-backdrop" *ngIf="remindPopupVisible" (click)="closeRemindPopup()">
+    <div class="action-popup" (click)="$event.stopPropagation()">
+      <p class="action-popup-title">{{ remindItem?.mealName }}</p>
+      <p class="action-popup-hint">Hours before {{ remindItem?.mealTime }}</p>
+      <div class="delay-stepper">
+        <button class="delay-step-btn" [disabled]="!canDecrementRemindHours()"
+                (click)="remindHours = remindHours - 1">-</button>
+        <span class="delay-value">{{ remindHours }}</span>
+        <button class="delay-step-btn" [disabled]="!canIncrementRemindHours()"
+                (click)="remindHours = remindHours + 1">+</button>
+      </div>
+      <p class="action-popup-hint" [class.remind-time--invalid]="!remindTimeIsValid()">
+        Reminds at {{ remindComputedTime() }}
+      </p>
+      <ion-button expand="block" [disabled]="!remindTimeIsValid()" (click)="saveReminder()">
+        <ion-icon slot="start" name="checkmark-outline"></ion-icon>
+        Save
+      </ion-button>
+      <ion-button expand="block" fill="clear" (click)="closeRemindPopup()">Cancel</ion-button>
+    </div>
+  </div>
+
+  <!-- Extras action popup -->
+  <div class="action-backdrop" *ngIf="extrasActionVisible" (click)="closeExtrasAction()">
+    <div class="action-popup" (click)="$event.stopPropagation()">
+      <p class="action-popup-title">{{ extrasActionEntry?.mealName }}</p>
+      <ion-button *ngIf="extrasActionMeal?.recipeUrl" expand="block" fill="outline"
+                  (click)="extrasActionGoToRecipe()">
+        <ion-icon slot="start" name="open-outline"></ion-icon>
+        Go to Recipe
+      </ion-button>
+      <ion-button *ngIf="!extrasActionEntry?.notificationId" expand="block" fill="outline"
+                  (click)="openExtrasRemindPopup()">
+        <ion-icon slot="start" name="notifications-outline"></ion-icon>
+        Remind Me!
+      </ion-button>
+      <ion-button *ngIf="extrasActionEntry?.notificationId" expand="block" fill="outline"
+                  (click)="cancelExtrasReminder()">
+        <ion-icon slot="start" name="notifications-off-outline"></ion-icon>
+        Cancel Reminder
+      </ion-button>
+      <ion-button expand="block" fill="outline" class="btn-delete" (click)="extrasActionRemove()">
+        <ion-icon slot="start" name="trash-outline"></ion-icon>
+        Remove
+      </ion-button>
+    </div>
+  </div>
+
+  <!-- Extras remind popup -->
+  <div class="action-backdrop" *ngIf="extrasRemindPopupVisible" (click)="closeExtrasRemindPopup()">
+    <div class="action-popup" (click)="$event.stopPropagation()">
+      <p class="action-popup-title">{{ extrasActionEntry?.mealName }}</p>
+      <p class="action-popup-hint">Choose when to be reminded</p>
+      <input type="datetime-local" class="text-input"
+             [(ngModel)]="extrasRemindDateTime" />
+      <ion-button expand="block" (click)="saveExtrasReminder()">
+        <ion-icon slot="start" name="checkmark-outline"></ion-icon>
+        Save
+      </ion-button>
+      <ion-button expand="block" fill="clear" (click)="closeExtrasRemindPopup()">Cancel</ion-button>
     </div>
   </div>
 
@@ -223,13 +296,13 @@
                   +{{ pickerOverflowSvc.getOverflowCount(meal.id, matchTags.length) }}
                 </span>
               </ng-container>
-              <ng-container *ngIf="mealUsageCounts.get(meal.name) as count">
+              <ng-container *ngIf="getUsageCount(meal) as count">
                 <ion-icon name="flame-outline" class="picker-flame-icon"></ion-icon>
                 <span class="picker-flame-count">{{ count }}</span>
               </ng-container>
               <ion-icon name="snow-outline" class="picker-snow-icon"
-                *ngIf="isMealFrozen(meal.name)"
-                (click)="showSnowflakeTooltip(meal.name, $event)">
+                *ngIf="isMealFrozen(meal)"
+                (click)="showSnowflakeTooltip(meal, $event)">
               </ion-icon>
             </div>
           </ng-container>
@@ -325,13 +398,13 @@
           <ng-container *ngIf="pickerMeals.length > 0; else extrasNoMeals">
             <div class="picker-meal-row" *ngFor="let meal of pickerMeals" (click)="selectExtra(meal)">
               <span class="picker-meal-name">{{ meal.name }}</span>
-              <ng-container *ngIf="mealUsageCounts.get(meal.name) as count">
+              <ng-container *ngIf="getUsageCount(meal) as count">
                 <ion-icon name="flame-outline" class="picker-flame-icon"></ion-icon>
                 <span class="picker-flame-count">{{ count }}</span>
               </ng-container>
               <ion-icon name="snow-outline" class="picker-snow-icon"
-                *ngIf="isMealFrozen(meal.name)"
-                (click)="showSnowflakeTooltip(meal.name, $event)">
+                *ngIf="isMealFrozen(meal)"
+                (click)="showSnowflakeTooltip(meal, $event)">
               </ion-icon>
             </div>
           </ng-container>

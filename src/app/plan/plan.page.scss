@@ -30,9 +30,11 @@
   background: var(--surface-1);
   border-radius: 12px;
   overflow: hidden;
+  border: 1px solid transparent;
 
-  &--past  { background: rgb(50, 22, 22); }
-  &--today { background: rgb(22, 50, 26); }
+  &--past   { background: rgb(70, 40, 40); border-color: rgba(220, 80,  80,  0.35); }
+  &--today  { background: rgb(35, 65, 40); border-color: rgba(80,  200, 100, 0.35); }
+  &--future { border-color: rgba(255, 255, 255, 0.15); }
 }
 
 .day-header {
@@ -127,6 +129,14 @@
   &--two-lines {
     -webkit-line-clamp: 2;
   }
+}
+
+.meal-reminder-icon {
+  font-size: 0.9rem;
+  color: var(--ion-color-primary);
+  margin-left: 4px;
+  vertical-align: -0.15em;
+  flex-shrink: 0;
 }
 
 // Star icon on plan item rows
@@ -494,19 +504,24 @@
 
 .extras-meal-name {
   font-family: 'Inter', sans-serif;
-  font-size: 0.9rem;
+  font-size: 0.85rem;
   flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  display: -webkit-box;
+  -webkit-line-clamp: 1;
+  -webkit-box-orient: vertical;
 }
 
-.extras-remove-btn {
-  background: none;
-  border: none;
-  padding: 4px;
+.extras-item {
   cursor: pointer;
-  color: rgba(255, 255, 255, 0.35);
-  display: flex;
-  align-items: center;
-  font-size: 1.1rem;
+}
+
+.extras-reminder-icon {
+  font-size: 0.9rem;
+  color: var(--ion-color-primary);
+  margin-left: 4px;
+  vertical-align: -0.15em;
   flex-shrink: 0;
 }
 
@@ -515,4 +530,43 @@
   color: var(--ion-color-medium);
   font-family: 'Inter', sans-serif;
   font-size: 0.9rem;
+}
+
+.remind-time--invalid {
+  color: rgb(255, 180, 171);
+}
+
+// Delay stepper (used in remind popup)
+.delay-stepper {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 20px;
+  margin: 8px 0;
+}
+
+.delay-step-btn {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  background: var(--surface-3);
+  border: none;
+  color: #fff;
+  font-size: 1.4rem;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  &:disabled {
+    opacity: 0.3;
+    cursor: default;
+  }
+}
+
+.delay-value {
+  font-size: 1.5rem;
+  font-weight: 600;
+  min-width: 32px;
+  text-align: center;
 }

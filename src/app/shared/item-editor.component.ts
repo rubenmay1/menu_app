@@ -7,6 +7,7 @@ export interface EditorItem {
   name: string;
   tagIds?: string[];
   resolvedTags?: { id: string; name: string; color: string }[];
+  mealTime?: string;
 }
 
 @Component({
@@ -24,13 +25,14 @@ export class ItemEditorComponent {
   @Input() placeholder: string = 'Item name…';
   @Input() addLabel: string = '';
 
-  @Output() itemAdd = new EventEmitter<{ name: string; tagIds: string[] }>();
-  @Output() itemUpdate = new EventEmitter<{ id: string; name: string; tagIds: string[] }>();
+  @Output() itemAdd = new EventEmitter<{ name: string; tagIds: string[]; mealTime?: string }>();
+  @Output() itemUpdate = new EventEmitter<{ id: string; name: string; tagIds: string[]; mealTime?: string }>();
   @Output() itemRemove = new EventEmitter<string>();
   @Output() itemsReorder = new EventEmitter<EditorItem[]>();
 
   newItemName: string = '';
   newItemTagIds: string[] = [];
+  newItemMealTime: string = '';
   editingItemId: string | null = null;
 
   constructor(private readonly alertCtrl: AlertController) {}
@@ -51,21 +53,23 @@ export class ItemEditorComponent {
   onAdd(): void {
     const name = this.newItemName.trim();
     if (!name) return;
-    this.itemAdd.emit({ name, tagIds: this.showTags ? [...this.newItemTagIds] : [] });
+    this.itemAdd.emit({ name, tagIds: this.showTags ? [...this.newItemTagIds] : [], mealTime: this.newItemMealTime || undefined });
     this.newItemName = '';
     this.newItemTagIds = [];
+    this.newItemMealTime = '';
   }
 
   onEditClick(item: EditorItem): void {
     this.editingItemId = item.id;
     this.newItemName = item.name;
     this.newItemTagIds = [...(item.tagIds ?? [])];
+    this.newItemMealTime = item.mealTime ?? '';
   }
 
   onUpdate(): void {
     const name = this.newItemName.trim();
     if (!name || !this.editingItemId) return;
-    this.itemUpdate.emit({ id: this.editingItemId, name, tagIds: this.showTags ? [...this.newItemTagIds] : [] });
+    this.itemUpdate.emit({ id: this.editingItemId, name, tagIds: this.showTags ? [...this.newItemTagIds] : [], mealTime: this.newItemMealTime || undefined });
     this.cancelEdit();
   }
 
@@ -94,6 +98,7 @@ export class ItemEditorComponent {
     this.editingItemId = null;
     this.newItemName = '';
     this.newItemTagIds = [];
+    this.newItemMealTime = '';
   }
 
   onRemove(id: string): void {

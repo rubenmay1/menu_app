@@ -57,6 +57,30 @@
   margin-bottom: 20px;
 }
 
+.meal-time-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 16px;
+}
+
+.meal-time-input {
+  flex: 1;
+  margin-bottom: 0;
+}
+
+.meal-time-clear {
+  background: none;
+  border: none;
+  padding: 4px;
+  cursor: pointer;
+  color: rgba(255, 255, 255, 0.35);
+  display: flex;
+  align-items: center;
+  font-size: 1.1rem;
+  flex-shrink: 0;
+}
+
 .edit-actions {
   display: flex;
   flex-direction: column;

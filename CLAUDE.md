@@ -1,10 +1,13 @@
 # Menu - Weekly Meal Planner App — Claude Code Project Brief
 
+@ARCHITECTURE.md
 @STYLE_GUIDE.md
 
 ## Project Goal
 Angular + TypeScript + Ionic mobile app for Android. No server required. All data stored in localStorage on-device.
 Dropbox used for DB backup and restore only. Coded in VS Code, tested in browser, deployed as APK.
+
+See `ARCHITECTURE.md` for the system design (persistence keys, sharing, Dropbox, notifications, web-vs-Android). This file holds the dev-environment and UI/UX brief that an agent needs at the start of every session.
 
 ---
 
@@ -52,14 +55,17 @@ Browser dev with live reload.
 ### `scripts/emulator.ps1`
 Build, sync, and launch on Android emulator.
 
-### `scripts/publish-apk-major-change.ps1`
-Increment major version number (x.1.1). Runs `sync-version.ps1`. Open Android Studio to build and sign a release APK.
+### `scripts/publish-apk-major.ps1`
+Bump major version (x.0.0). Delegates to `publish-base.ps1` which bumps `versionCode` + `versionName` in `android/app/build.gradle`, runs `sync-version.ps1`, builds with `ionic build --prod`, runs `npx cap sync`, then opens Android Studio for signed APK packaging.
 
-### `scripts/publish-apk-medium-change.ps1`
-Increment middle version number (1.x.1). Runs `sync-version.ps1`. Open Android Studio to build and sign a release APK.
+### `scripts/publish-apk-minor.ps1`
+Bump minor version (1.x.0). Same pipeline as major.
 
-### `scripts/publish-apk-minor-change.ps1`
-Increment minor version number (1.1.x). Runs `sync-version.ps1`. Open Android Studio to build and sign a release APK.
+### `scripts/publish-apk-patch.ps1`
+Bump patch version (1.1.x). Same pipeline as major.
+
+### `scripts/publish-base.ps1`
+Shared publish pipeline. Not called directly - the three `publish-apk-*` scripts pass it the new versionName.
 
 ### `scripts/sync-version.ps1`
 Reads `versionName` from `android/app/build.gradle` and writes it into both `environment.ts` and `environment.prod.ts`. Run this after manually editing the Gradle version.
@@ -116,22 +122,14 @@ When viewing a shared plan in read-only mode, a read-mode bar is displayed and t
 - **Data**: View Data popup (total DB size KB, meal count, tag count, weeks planned) + Reset App Data (2-step confirmation).
 - App version number displayed at the bottom.
 
-### Data / Storage (localStorage keys)
-| Key | Value | Notes |
-|---|---|---|
-| `meals` | JSON `Meal[]` | Global meal list |
-| `tags` | JSON `Tag[]` | Global tag list |
-| `day-submenus-{dayIndex}` | JSON `SubMenu[]` | Sub-menu structure per day-of-week (shared across all weeks) |
-| `week-meals-{year}-{week}-{dayIndex}` | JSON `WeekMealEntry[]` | Meal selections per week per day |
-| `shared-plans` | JSON `SharedPlanRecord[]` | History of viewed shared plans |
-| `tab-visibility` | JSON object | Per-tab show/hide preferences |
-| `frozen-threshold-weeks` | string (number) | Weeks before a meal shows snowflake |
+### Data / Storage
+See `ARCHITECTURE.md` for the full list of localStorage keys, the sharing/Dropbox/notification design, and load-time migrations. The summary: every data key goes through `DbService`; feature services (`PlanService`, `MealService`, `TagService`, `SharedPlansService`) are thin typed wrappers; components never touch `localStorage` directly.
 
 ### Shared Utilities
 - `src/app/shared/week-utils.ts` — pure ISO week helpers (`getISOWeek`, `getISOWeekYear`, `getMondayOfISOWeek`, `formatShortDate`).
 - `src/app/shared/tag-pill.component.ts` — `<app-tag-pill name color size>`. Sizes: `'sm'` (default, inline) and `'md'` (tags list). Exported from `SharedModule`.
 - `SharedModule` must be imported by any feature module that uses `app-tag-pill`.
-- `src/app/shared/db.service.ts` — all SQLite access and `getDataStats()` for settings View Data popup.
+- `src/app/shared/db.service.ts` — all localStorage access and `getDataStats()` for settings View Data popup.
 
 ---
 
@@ -205,20 +203,20 @@ Use `ionViewWillEnter()` (not `ngOnInit`) to refresh data that may have changed 
 - Use `async`/`await` over raw Promises
 - Use **`interface`** for data models, not `class` unless behaviour is needed
 - Services must follow **single responsibility principle**
-- All SQLite access goes through a dedicated **`DbService`** — components never call SQLite directly
+- All localStorage access goes through a dedicated **`DbService`** — components never call `localStorage` directly
 - All Dropbox access goes through a dedicated **`DropboxService`** — never call the Dropbox SDK directly from components
 - Use **Angular dependency injection** for all services
 - Group related files by **feature folder**, not by type (e.g. `meals/` contains component, service, and model together)
 - Use **`readonly`** on class properties that should not be reassigned
 - Always handle `Promise` rejections — no unhandled async errors
-- Environment-specific behaviour (e.g. jeep-sqlite vs real SQLite) must be isolated in the relevant service, not scattered across components
+- Environment-specific behaviour (web shim vs Android native) must be isolated in the relevant service, not scattered across components
 
 ---
 
 ## Key Constraints
 
 - **No backend server** — the app is fully offline-first
-- **SQLite is the only data store** — no Firebase, no REST API, no cloud DB
+- **`localStorage` is the only data store** — no SQLite, no Firebase, no REST API, no cloud DB
 - **Dropbox is backup and restore only** — not a live sync target
 - **Android Studio is a background tool only** — never used as an editor, only for SDK and emulator
-- **`npx cap sync`** must be run after every `ng build` before testing on emulator or device — `build.ps1` handles this automatically
+- **`npx cap sync`** must be run after every `ng build` before testing on emulator or device — the publish pipeline handles this automatically

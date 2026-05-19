@@ -50,6 +50,17 @@
   (keydown)="onKeydown($event)"
 />
 
+<ng-container *ngIf="showTags">
+  <p class="section-label">Meal Time (Optional)</p>
+  <div class="meal-time-row">
+    <input type="time" class="text-input meal-time-input"
+           [(ngModel)]="newItemMealTime" />
+    <button *ngIf="newItemMealTime" class="meal-time-clear" (click)="newItemMealTime = ''" type="button">
+      <ion-icon name="close-outline"></ion-icon>
+    </button>
+  </div>
+</ng-container>
+
 <p class="section-label" *ngIf="showTags">Tags (optional)</p>
 <p class="no-tags-hint" *ngIf="showTags && tags.length === 0">No tags available</p>
 

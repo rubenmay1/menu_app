@@ -21,7 +21,10 @@ export class PlanService {
         id: sm.id,
         name: sm.name,
         tagIds: sm.tagIds,
-        mealName: meal?.mealName
+        mealTime: sm.mealTime,
+        mealName: meal?.mealName,
+        mealId: meal?.mealId,
+        notificationId: meal?.notificationId,
       };
     });
   }

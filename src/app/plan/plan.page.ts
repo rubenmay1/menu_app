@@ -3,6 +3,7 @@ import { Router } from '@angular/router';
 import { IonContent, Platform } from '@ionic/angular';
 import { Browser } from '@capacitor/browser';
 import { Share } from '@capacitor/share';
+import { NotificationService } from '../shared/notification.service';
 import * as LZString from 'lz-string';
 import { Subscription } from 'rxjs';
 import { DayEntry, WeekState, MenuItem, ResolvedMenuItem, ExtraEntry, SharedPlanData } from './plan.models';
@@ -75,6 +76,18 @@ export class PlanPage implements OnInit, OnDestroy, AfterViewInit, AfterViewChec
   mealActionDayIndex: number = -1;
   mealActionMeal: Meal | null = null;
 
+  remindPopupVisible = false;
+  remindHours = 1;
+  remindItem: ResolvedMenuItem | null = null;
+  remindDayIndex = -1;
+
+  extrasActionVisible = false;
+  extrasActionEntry: ExtraEntry | null = null;
+  extrasActionMeal: Meal | null = null;
+
+  extrasRemindPopupVisible = false;
+  extrasRemindDateTime = '';
+
   readMode = false;
   clearWeekPromptVisible = false;
 
@@ -99,6 +112,7 @@ export class PlanPage implements OnInit, OnDestroy, AfterViewInit, AfterViewChec
     private readonly prefs: PreferenceService,
     private readonly platform: Platform,
     private readonly router: Router,
+    private readonly notificationService: NotificationService,
     readonly overflowSvc: ComponentOverflowService,
   ) {
     overflowSvc.configure(6, [
@@ -114,6 +128,7 @@ export class PlanPage implements OnInit, OnDestroy, AfterViewInit, AfterViewChec
   }
 
   async ngOnInit(): Promise<void> {
+    void this.notificationService.createChannel();
     await this.loadWeek(this.weekState.year, this.weekState.isoWeek);
     this.dataChangedSub = this.db.dataChanged$.subscribe(() => {
       if (!this.readMode) void this.loadWeek(this.weekState.year, this.weekState.isoWeek);
@@ -165,6 +180,12 @@ export class PlanPage implements OnInit, OnDestroy, AfterViewInit, AfterViewChec
     this.backButtonSub = this.platform.backButton.subscribeWithPriority(10, (processNextHandler) => {
       if (this.clearWeekPromptVisible) {
         this.onClearWeekCancel();
+      } else if (this.remindPopupVisible) {
+        this.closeRemindPopup();
+      } else if (this.extrasRemindPopupVisible) {
+        this.closeExtrasRemindPopup();
+      } else if (this.extrasActionVisible) {
+        this.closeExtrasAction();
       } else if (this.mealActionVisible) {
         this.closeMealActionPopup();
       } else if (this.extrasPickerVisible) {
@@ -192,6 +213,8 @@ export class PlanPage implements OnInit, OnDestroy, AfterViewInit, AfterViewChec
   isDayComplete(day: DayEntry): boolean {
     return day.items.length > 0 && day.items.every(item => !!(item.mealName?.trim()));
   }
+
+  get colouredCards(): boolean { return this.prefs.colouredCards; }
 
   getDayStatus(day: DayEntry): 'past' | 'today' | 'future' {
     if (!this.prefs.colouredCards) return 'future';
@@ -226,7 +249,10 @@ export class PlanPage implements OnInit, OnDestroy, AfterViewInit, AfterViewChec
         id: it.id,
         name: it.name,
         tagIds: it.tagIds,
+        mealTime: it.mealTime,
         mealName: it.mealName,
+        mealId: it.mealId,
+        notificationId: it.notificationId,
         resolvedTags
       };
     });
@@ -369,19 +395,45 @@ export class PlanPage implements OnInit, OnDestroy, AfterViewInit, AfterViewChec
   private async loadWeek(year: number, isoWeek: number): Promise<void> {
     this.weekState.setWeek(year, isoWeek);
     this.tags = await this.tagService.getTags();
+    const now = Date.now();
     const monday = getMondayOfISOWeek(year, isoWeek);
     const days = await Promise.all(DAY_NAMES.map(async (name, i) => {
       const date = new Date(monday);
       date.setUTCDate(monday.getUTCDate() + i);
+      let entries = await this.planService.getWeekMeals(year, isoWeek, i);
+      const stale = entries.filter(e => e.notificationTime !== undefined && e.notificationTime <= now);
+      if (stale.length > 0) {
+        entries = entries.map(e =>
+          e.notificationTime !== undefined && e.notificationTime <= now
+            ? { ...e, notificationId: undefined, notificationTime: undefined }
+            : e
+        );
+        await this.planService.setWeekMeals(year, isoWeek, i, entries);
+      }
+      const submenus = await this.planService.getSubMenus(i);
+      const items = submenus.map(sm => {
+        const meal = entries.find(m => m.itemId === sm.id);
+        return { id: sm.id, name: sm.name, tagIds: sm.tagIds, mealTime: sm.mealTime, mealName: meal?.mealName, mealId: meal?.mealId, notificationId: meal?.notificationId };
+      });
       return {
         dayIndex: i,
         dayName: name,
         date,
         displayDate: formatShortDate(date),
-        items: this.resolveItems(await this.planService.getMenuItems(year, isoWeek, i))
+        items: this.resolveItems(items)
       };
     }));
-    this.extrasEntries = await this.planService.getExtras(year, isoWeek);
+    let extras = await this.planService.getExtras(year, isoWeek);
+    const staleExtras = extras.filter(e => e.notificationTime !== undefined && e.notificationTime <= now);
+    if (staleExtras.length > 0) {
+      extras = extras.map(e =>
+        e.notificationTime !== undefined && e.notificationTime <= now
+          ? { ...e, notificationId: undefined, notificationTime: undefined }
+          : e
+      );
+      await this.planService.setExtras(year, isoWeek, extras);
+    }
+    this.extrasEntries = extras;
     this.week = { year, isoWeek, days };
     this.initItemStages();
   }
@@ -457,10 +509,10 @@ export class PlanPage implements OnInit, OnDestroy, AfterViewInit, AfterViewChec
     return this.dayEditorIndex >= 0 ? this.week.days[this.dayEditorIndex] : null;
   }
 
-  async onItemAdd(event: { name: string; tagIds: string[] }): Promise<void> {
+  async onItemAdd(event: { name: string; tagIds: string[]; mealTime?: string }): Promise<void> {
     const dayIdx = this.dayEditorIndex;
     const submenus = await this.planService.getSubMenus(dayIdx);
-    submenus.push({ id: this.planService.createItemId(), name: event.name, tagIds: event.tagIds });
+    submenus.push({ id: this.planService.createItemId(), name: event.name, tagIds: event.tagIds, mealTime: event.mealTime });
     await this.planService.setSubMenus(dayIdx, submenus);
     const { year, isoWeek } = this.week;
     this.week.days[dayIdx] = {
@@ -483,12 +535,12 @@ export class PlanPage implements OnInit, OnDestroy, AfterViewInit, AfterViewChec
     this.initItemStages();
   }
 
-  async onItemUpdate(event: { id: string; name: string; tagIds: string[] }): Promise<void> {
+  async onItemUpdate(event: { id: string; name: string; tagIds: string[]; mealTime?: string }): Promise<void> {
     const dayIdx = this.dayEditorIndex;
     const submenus = await this.planService.getSubMenus(dayIdx);
     const idx = submenus.findIndex(s => s.id === event.id);
     if (idx < 0) return;
-    submenus[idx] = { ...submenus[idx], name: event.name, tagIds: event.tagIds };
+    submenus[idx] = { ...submenus[idx], name: event.name, tagIds: event.tagIds, mealTime: event.mealTime };
     await this.planService.setSubMenus(dayIdx, submenus);
     const { year, isoWeek } = this.week;
     this.week.days[dayIdx] = {
@@ -507,13 +559,15 @@ export class PlanPage implements OnInit, OnDestroy, AfterViewInit, AfterViewChec
         id: e.id,
         name: e.name,
         tagIds: e.tagIds ?? [],
+        mealTime: e.mealTime,
         mealName: existing?.mealName,
+        notificationId: existing?.notificationId,
         resolvedTags: e.resolvedTags ?? []
       };
     });
     this.week.days[dayIdx] = { ...this.week.days[dayIdx], items };
     await this.planService.setSubMenus(dayIdx,
-      items.map(it => ({ id: it.id, name: it.name, tagIds: it.tagIds }))
+      items.map(it => ({ id: it.id, name: it.name, tagIds: it.tagIds, mealTime: it.mealTime }))
     );
     this.initItemStages();
   }
@@ -532,8 +586,8 @@ export class PlanPage implements OnInit, OnDestroy, AfterViewInit, AfterViewChec
     this.mealUsageCounts = usageCounts;
     this.mealLastUsedDates = lastUsed;
     const sorted = meals.sort((a, b) => {
-      const ua = this.mealUsageCounts.get(a.name) ?? 0;
-      const ub = this.mealUsageCounts.get(b.name) ?? 0;
+      const ua = this.mealUsageCounts.get(a.id) ?? 0;
+      const ub = this.mealUsageCounts.get(b.id) ?? 0;
       if (ub !== ua) return ub - ua;
       return a.name.localeCompare(b.name);
     });
@@ -622,15 +676,12 @@ export class PlanPage implements OnInit, OnDestroy, AfterViewInit, AfterViewChec
   async saveCustom(): Promise<void> {
     const name = this.customName.trim();
     if (!name || !this.itemPopupItem) return;
+    let savedMealId: string | undefined;
     if (this.customStarred) {
-      await this.mealService.saveMeal({
-        id: this.mealService.createId(),
-        name,
-        tagIds: [],
-        ingredients: []
-      });
+      savedMealId = this.mealService.createId();
+      await this.mealService.saveMeal({ id: savedMealId, name, tagIds: [], ingredients: [] });
     }
-    await this.saveItemUpdate(this.itemPopupItem, this.itemPopupDayIndex, { mealName: name });
+    await this.saveItemUpdate(this.itemPopupItem, this.itemPopupDayIndex, { mealName: name, mealId: savedMealId });
     this.closeItemPopup();
   }
 
@@ -645,7 +696,7 @@ export class PlanPage implements OnInit, OnDestroy, AfterViewInit, AfterViewChec
 
   async selectMeal(meal: Meal): Promise<void> {
     if (!this.itemPopupItem) return;
-    await this.saveItemUpdate(this.itemPopupItem, this.itemPopupDayIndex, { mealName: meal.name });
+    await this.saveItemUpdate(this.itemPopupItem, this.itemPopupDayIndex, { mealName: meal.name, mealId: meal.id });
     this.closeItemPopup();
   }
 
@@ -658,8 +709,8 @@ export class PlanPage implements OnInit, OnDestroy, AfterViewInit, AfterViewChec
     this.mealUsageCounts = usageCounts;
     this.mealLastUsedDates = lastUsed;
     const sorted = meals.sort((a, b) => {
-      const ua = usageCounts.get(a.name) ?? 0;
-      const ub = usageCounts.get(b.name) ?? 0;
+      const ua = usageCounts.get(a.id) ?? 0;
+      const ub = usageCounts.get(b.id) ?? 0;
       if (ub !== ua) return ub - ua;
       return a.name.localeCompare(b.name);
     });
@@ -672,15 +723,19 @@ export class PlanPage implements OnInit, OnDestroy, AfterViewInit, AfterViewChec
     this.extrasPickerVisible = true;
   }
 
-  isMealFrozen(mealName: string): boolean {
+  isMealFrozen(meal: Meal): boolean {
     const threshold = this.prefs.frozenThresholdWeeks;
-    const lastUsed = this.mealLastUsedDates.get(mealName);
+    const lastUsed = this.mealLastUsedDates.get(meal.id) ?? this.mealLastUsedDates.get(meal.name);
     if (!lastUsed) return true;
     const weeksAgo = (Date.now() - lastUsed.getTime()) / (7 * 24 * 60 * 60 * 1000);
     return weeksAgo >= threshold;
   }
 
-  showSnowflakeTooltip(mealName: string, event: Event): void {
+  getUsageCount(meal: Meal): number {
+    return this.mealUsageCounts.get(meal.id) ?? this.mealUsageCounts.get(meal.name) ?? 0;
+  }
+
+  showSnowflakeTooltip(meal: Meal, event: Event): void {
     event.stopPropagation();
 
     const path = event.composedPath() as Element[];
@@ -693,7 +748,7 @@ export class PlanPage implements OnInit, OnDestroy, AfterViewInit, AfterViewChec
       this.snowTooltipTop = rowRect.top - popupRect.top + (scrollEl?.scrollTop ?? 0) + rowRect.height / 2;
     }
 
-    const lastUsed = this.mealLastUsedDates.get(mealName);
+    const lastUsed = this.mealLastUsedDates.get(meal.id) ?? this.mealLastUsedDates.get(meal.name);
     if (!lastUsed) {
       this.snowTooltipText = 'Never used';
     } else {
@@ -721,27 +776,33 @@ export class PlanPage implements OnInit, OnDestroy, AfterViewInit, AfterViewChec
   }
 
   async selectExtra(meal: Meal): Promise<void> {
-    await this.addExtra(meal.name);
+    await this.addExtra(meal.name, meal.id);
     this.closeExtrasPicker();
   }
 
   async saveExtrasCustom(): Promise<void> {
     const name = this.extrasCustomName.trim();
     if (!name) return;
+    let savedMealId: string | undefined;
     if (this.extrasCustomStarred) {
-      await this.mealService.saveMeal({ id: this.mealService.createId(), name, tagIds: [], ingredients: [] });
+      savedMealId = this.mealService.createId();
+      await this.mealService.saveMeal({ id: savedMealId, name, tagIds: [], ingredients: [] });
     }
-    await this.addExtra(name);
+    await this.addExtra(name, savedMealId);
     this.closeExtrasPicker();
   }
 
-  private async addExtra(mealName: string): Promise<void> {
+  private async addExtra(mealName: string, mealId?: string): Promise<void> {
     const { year, isoWeek } = this.week;
-    this.extrasEntries = [...this.extrasEntries, { id: this.planService.createItemId(), mealName }];
+    this.extrasEntries = [...this.extrasEntries, { id: this.planService.createItemId(), mealName, mealId }];
     await this.planService.setExtras(year, isoWeek, this.extrasEntries);
   }
 
   async removeExtra(id: string): Promise<void> {
+    const entry = this.extrasEntries.find(e => e.id === id);
+    if (entry?.notificationId) {
+      await this.notificationService.cancel(entry.notificationId);
+    }
     const { year, isoWeek } = this.week;
     this.extrasEntries = this.extrasEntries.filter(e => e.id !== id);
     await this.planService.setExtras(year, isoWeek, this.extrasEntries);
@@ -751,7 +812,9 @@ export class PlanPage implements OnInit, OnDestroy, AfterViewInit, AfterViewChec
     this.mealActionItem = item;
     this.mealActionDayIndex = dayIndex;
     const meals = await this.mealService.getMeals();
-    this.mealActionMeal = meals.find(m => m.name === item.mealName) ?? null;
+    this.mealActionMeal = item.mealId
+      ? (meals.find(m => m.id === item.mealId) ?? meals.find(m => m.name === item.mealName) ?? null)
+      : (meals.find(m => m.name === item.mealName) ?? null);
     this.mealActionVisible = true;
   }
 
@@ -773,7 +836,7 @@ export class PlanPage implements OnInit, OnDestroy, AfterViewInit, AfterViewChec
     const item = this.mealActionItem!;
     const dayIndex = this.mealActionDayIndex;
     this.closeMealActionPopup();
-    await this.saveItemUpdate(item, dayIndex, { mealName: undefined });
+    await this.saveItemUpdate(item, dayIndex, { mealName: undefined, mealId: undefined });
   }
 
   async mealActionGoToRecipe(): Promise<void> {
@@ -782,12 +845,15 @@ export class PlanPage implements OnInit, OnDestroy, AfterViewInit, AfterViewChec
     await Browser.open({ url });
   }
 
-  private async saveItemUpdate(item: ResolvedMenuItem, dayIndex: number, changes: { mealName?: string }): Promise<void> {
+  private async saveItemUpdate(item: ResolvedMenuItem, dayIndex: number, changes: { mealName?: string; mealId?: string }): Promise<void> {
+    if (item.notificationId) {
+      await this.notificationService.cancel(item.notificationId);
+    }
     const { year, isoWeek } = this.week;
     const entries = await this.planService.getWeekMeals(year, isoWeek, dayIndex);
     const idx = entries.findIndex(e => e.itemId === item.id);
     if (idx >= 0) {
-      entries[idx] = { ...entries[idx], ...changes };
+      entries[idx] = { ...entries[idx], ...changes, notificationId: undefined, notificationTime: undefined };
     } else {
       entries.push({ itemId: item.id, ...changes });
     }
@@ -797,5 +863,188 @@ export class PlanPage implements OnInit, OnDestroy, AfterViewInit, AfterViewChec
       items: this.resolveItems(await this.planService.getMenuItems(year, isoWeek, dayIndex))
     };
     this.initItemStages();
+  }
+
+  canSetMealReminder(): boolean {
+    const item = this.mealActionItem;
+    if (!item?.mealTime) return false;
+    const { year, isoWeek } = this.week;
+    const monday = getMondayOfISOWeek(year, isoWeek);
+    const dayDate = new Date(monday);
+    dayDate.setUTCDate(monday.getUTCDate() + this.mealActionDayIndex);
+    const [h, m] = item.mealTime.split(':').map(Number);
+    dayDate.setHours(h, m, 0, 0);
+    return dayDate.getTime() > Date.now();
+  }
+
+  openRemindPopup(item: ResolvedMenuItem, dayIndex: number): void {
+    this.closeMealActionPopup();
+    this.remindItem = item;
+    this.remindDayIndex = dayIndex;
+    this.remindHours = 1;
+    this.remindPopupVisible = true;
+  }
+
+  closeRemindPopup(): void {
+    this.remindPopupVisible = false;
+    this.remindItem = null;
+    this.remindDayIndex = -1;
+  }
+
+  private remindDateForHours(hours: number): Date | null {
+    const item = this.remindItem;
+    if (!item?.mealTime) return null;
+    const { year, isoWeek } = this.week;
+    const monday = getMondayOfISOWeek(year, isoWeek);
+    const d = new Date(monday);
+    d.setUTCDate(monday.getUTCDate() + this.remindDayIndex);
+    const [h, m] = item.mealTime.split(':').map(Number);
+    d.setHours(h, m, 0, 0);
+    d.setHours(d.getHours() - hours);
+    return d;
+  }
+
+  remindTimeIsValid(): boolean {
+    const d = this.remindDateForHours(this.remindHours);
+    return d !== null && d.getTime() > Date.now();
+  }
+
+  canDecrementRemindHours(): boolean {
+    return this.remindHours > 1;
+  }
+
+  canIncrementRemindHours(): boolean {
+    const d = this.remindDateForHours(this.remindHours + 1);
+    return d !== null && d.getTime() > Date.now();
+  }
+
+  remindComputedTime(): string | null {
+    const mealTime = this.remindItem?.mealTime;
+    if (!mealTime) return null;
+    const [h, m] = mealTime.split(':').map(Number);
+    const totalMinutes = h * 60 + m - this.remindHours * 60;
+    const wrapped = ((totalMinutes % (24 * 60)) + 24 * 60) % (24 * 60);
+    const rh = Math.floor(wrapped / 60);
+    const rm = wrapped % 60;
+    return `${String(rh).padStart(2, '0')}:${String(rm).padStart(2, '0')}`;
+  }
+
+  async saveReminder(): Promise<void> {
+    const item = this.remindItem;
+    const dayIndex = this.remindDayIndex;
+    if (!item?.mealTime) return;
+    await this.notificationService.ensurePermission();
+    const { year, isoWeek } = this.week;
+    const monday = getMondayOfISOWeek(year, isoWeek);
+    const dayDate = new Date(monday);
+    dayDate.setUTCDate(monday.getUTCDate() + dayIndex);
+    const [h, m] = item.mealTime.split(':').map(Number);
+    dayDate.setHours(h, m, 0, 0);
+    dayDate.setHours(dayDate.getHours() - this.remindHours);
+    const notifId = Math.floor(Math.random() * 2_000_000_000);
+    const notifTime = dayDate.getTime();
+    await this.notificationService.schedule(notifId, `Menu - ${item.mealName}`, `${item.name} at ${item.mealTime}`, dayDate);
+    const entries = await this.planService.getWeekMeals(year, isoWeek, dayIndex);
+    const idx = entries.findIndex(e => e.itemId === item.id);
+    if (idx >= 0) {
+      entries[idx] = { ...entries[idx], notificationId: notifId, notificationTime: notifTime };
+    } else {
+      entries.push({ itemId: item.id, notificationId: notifId, notificationTime: notifTime });
+    }
+    await this.planService.setWeekMeals(year, isoWeek, dayIndex, entries);
+    this.week.days[dayIndex] = {
+      ...this.week.days[dayIndex],
+      items: this.resolveItems(await this.planService.getMenuItems(year, isoWeek, dayIndex))
+    };
+    this.initItemStages();
+    this.closeRemindPopup();
+  }
+
+  async cancelMealReminder(): Promise<void> {
+    const item = this.mealActionItem;
+    const dayIndex = this.mealActionDayIndex;
+    if (!item?.notificationId) return;
+    await this.notificationService.cancel(item.notificationId);
+    const { year, isoWeek } = this.week;
+    const entries = await this.planService.getWeekMeals(year, isoWeek, dayIndex);
+    const idx = entries.findIndex(e => e.itemId === item.id);
+    if (idx >= 0) {
+      entries[idx] = { ...entries[idx], notificationId: undefined, notificationTime: undefined };
+    }
+    await this.planService.setWeekMeals(year, isoWeek, dayIndex, entries);
+    this.week.days[dayIndex] = {
+      ...this.week.days[dayIndex],
+      items: this.resolveItems(await this.planService.getMenuItems(year, isoWeek, dayIndex))
+    };
+    this.initItemStages();
+    this.closeMealActionPopup();
+  }
+
+  async openExtrasAction(entry: ExtraEntry): Promise<void> {
+    this.extrasActionEntry = entry;
+    if (entry.mealId) {
+      const meals = await this.mealService.getMeals();
+      this.extrasActionMeal = meals.find(m => m.id === entry.mealId) ?? null;
+    } else {
+      this.extrasActionMeal = null;
+    }
+    this.extrasActionVisible = true;
+  }
+
+  closeExtrasAction(): void {
+    this.extrasActionVisible = false;
+    this.extrasActionEntry = null;
+    this.extrasActionMeal = null;
+  }
+
+  async extrasActionRemove(): Promise<void> {
+    const id = this.extrasActionEntry?.id;
+    this.closeExtrasAction();
+    if (id) await this.removeExtra(id);
+  }
+
+  async extrasActionGoToRecipe(): Promise<void> {
+    const url = this.extrasActionMeal?.recipeUrl;
+    if (!url) return;
+    await Browser.open({ url });
+  }
+
+  openExtrasRemindPopup(): void {
+    const tomorrow = new Date();
+    tomorrow.setDate(tomorrow.getDate() + 1);
+    tomorrow.setHours(18, 0, 0, 0);
+    const pad = (n: number) => String(n).padStart(2, '0');
+    this.extrasRemindDateTime = `${tomorrow.getFullYear()}-${pad(tomorrow.getMonth() + 1)}-${pad(tomorrow.getDate())}T${pad(tomorrow.getHours())}:${pad(tomorrow.getMinutes())}`;
+    this.extrasRemindPopupVisible = true;
+  }
+
+  closeExtrasRemindPopup(): void {
+    this.extrasRemindPopupVisible = false;
+  }
+
+  async saveExtrasReminder(): Promise<void> {
+    const entry = this.extrasActionEntry;
+    if (!entry || !this.extrasRemindDateTime) return;
+    const at = new Date(this.extrasRemindDateTime);
+    if (isNaN(at.getTime())) return;
+    await this.notificationService.ensurePermission();
+    const notifId = Math.floor(Math.random() * 2_000_000_000);
+    await this.notificationService.schedule(notifId, `Menu - ${entry.mealName}`, '', at);
+    const { year, isoWeek } = this.week;
+    this.extrasEntries = this.extrasEntries.map(e => e.id === entry.id ? { ...e, notificationId: notifId, notificationTime: at.getTime() } : e);
+    await this.planService.setExtras(year, isoWeek, this.extrasEntries);
+    this.extrasActionEntry = this.extrasEntries.find(e => e.id === entry.id) ?? null;
+    this.closeExtrasRemindPopup();
+    this.closeExtrasAction();
+  }
+
+  async cancelExtrasReminder(): Promise<void> {
+    const entry = this.extrasActionEntry;
+    if (!entry?.notificationId) return;
+    await this.notificationService.cancel(entry.notificationId);
+    const { year, isoWeek } = this.week;
+    this.extrasEntries = this.extrasEntries.map(e => e.id === entry.id ? { ...e, notificationId: undefined, notificationTime: undefined } : e);
+    await this.planService.setExtras(year, isoWeek, this.extrasEntries);
+    this.closeExtrasAction();
   }
 }
